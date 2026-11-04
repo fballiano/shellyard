@@ -309,24 +309,6 @@ private struct SettingsEditor: View {
                 Toggle("", isOn: value).labelsHidden()
             }
 
-            Text("After connecting").font(.headline).padding(.top, 6)
-
-            InheritedRow(
-                title: "Type this",
-                setting: $settings.afterConnectText,
-                inheritedValue: effective.afterConnectText,
-                sourceFolderName: source(\.afterConnectText),
-                describe: { $0.isEmpty ? "nothing" : $0 }
-            ) { value in
-                TextField("cd /opt/maho/app{ENTER}", text: value)
-            }
-
-            Text("Termora types this into the session once it opens. Use "
-                 + "{ENTER}, {TAB}, {ESC}, the arrow names, and {DELAY:500} to wait.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.leading, 138)
-
             Text("Before connecting").font(.headline).padding(.top, 6)
 
             InheritedRow(
@@ -342,6 +324,24 @@ private struct SettingsEditor: View {
             Text("Termora runs this on this Mac before it opens the connection. "
                  + "Use $URI$, $PORT$, $USERNAME$ and $NAME$ in the arguments. "
                  + "A password must never go on a command line.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 138)
+
+            Text("After connecting").font(.headline).padding(.top, 6)
+
+            InheritedRow(
+                title: "Type this",
+                setting: $settings.afterConnectText,
+                inheritedValue: effective.afterConnectText,
+                sourceFolderName: source(\.afterConnectText),
+                describe: { $0.isEmpty ? "nothing" : $0 }
+            ) { value in
+                TextField("cd /opt/maho/app{ENTER}", text: value)
+            }
+
+            Text("Termora types this into the session once it opens. Use "
+                 + "{ENTER}, {TAB}, {ESC}, the arrow names, and {DELAY:500} to wait.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 138)
