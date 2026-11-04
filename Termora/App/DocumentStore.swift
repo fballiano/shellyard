@@ -247,7 +247,7 @@ final class DocumentStore: ObservableObject {
     // MARK: - Changes
 
     /// Changes the document, rebuilds the index, and saves.
-    func update(_ change: (inout Document) -> Void) {
+    func update(_ change: (inout TermoraModel.Document) -> Void) {
         guard let vault else { return }
         vault.update(change)
         index = DocumentIndex(vault.document)
@@ -299,7 +299,7 @@ final class DocumentStore: ObservableObject {
     private func append(children parentID: UUID?, depth: Int, into rows: inout [Row]) {
         // A tree deeper than the model allows cannot be drawn, and must not
         // turn into an endless walk.
-        guard depth < Document.maximumDepth else { return }
+        guard depth < TermoraModel.Document.maximumDepth else { return }
         for node in visibleChildren(of: parentID) {
             rows.append(Row(node: node, depth: depth))
             guard case let .folder(folder) = node, isExpanded(folder) else { continue }

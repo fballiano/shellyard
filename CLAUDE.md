@@ -74,12 +74,17 @@ packages in `Packages/`:
   forever rather than failing.
 - **TermoraSFTP** — an SFTP v3 client that runs over the control master's
   `-s sftp` channel. No cryptography of its own.
-- **GhosttyKit** — the upstream `Lakr233/libghostty-spm` package (Ghostty
-  1.3.1), pinned to an exact version in `project.yml`. Termora once carried
-  a vendored fork with three fixes; all three are upstream since 1.4.5, so
+- **GhosttyKit** — the upstream `Lakr233/libghostty-spm` package, pinned
+  with `exactVersion` in `project.yml`. It is the only remote dependency
+  (it brings `Lakr233/DisplayLink` with it). **Always pin the newest
+  upstream release**, majors included: list them with
+  `git ls-remote --tags https://github.com/Lakr233/libghostty-spm`. Each
+  release names the Ghostty commit it builds. Termora once carried a
+  vendored fork with three fixes; all three are upstream since 1.4.5, so
   the copy is gone. Before pinning a newer version, check that the wakeup
-  observers, `isSurfaceVisible` as a representable input, and
-  `sendKey(_:)` are still there — each guards against a bug Termora hit.
+  observers (`addWakeupObserver`), `TerminalViewState.isSurfaceVisible`,
+  and `TerminalViewState.sendKey(_:)` are still there — each guards against
+  a bug Termora hit.
 
 In the app target, `Termora/Terminal/` is the only code that calls
 libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits;
@@ -101,6 +106,9 @@ libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits;
 - **OpenSSH output ends lines with CRLF, and Swift counts `\r\n` as one
   `Character`.** `split(separator: "\n")` returns the whole log as one line.
   Use `split(whereSeparator: \.isNewline)`.
+- **`SwiftUI.Document` exists since the Xcode 27 SDK.** In a file that
+  imports SwiftUI, a bare `Document` is ambiguous. Write
+  `TermoraModel.Document`.
 - **Swift 6.3.3 compiler crash:** passing a method reference straight to a
   `Binding` setter (`set: change`) crashes codegen. Write the closure out:
   `set: { newValue in change(to: newValue) }`.

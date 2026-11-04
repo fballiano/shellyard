@@ -573,8 +573,9 @@ on a Mac, so without the search it would fail too.
 ### Termora uses the upstream libghostty-spm
 
 Termora depends on `Lakr233/libghostty-spm`, pinned to an exact version in
-`project.yml`. It once carried a vendored copy with three fixes; all three
-are upstream since 1.4.5 — the wakeup observers, `isSurfaceVisible` as a
-representable input, and programmatic key presses through
+`project.yml`. It is the only remote dependency, and Termora always pins the
+newest upstream release. It once carried a vendored copy with three fixes; all
+three are upstream since 1.4.5 — the wakeup observers,
+`TerminalViewState.isSurfaceVisible`, and programmatic key presses through
 `ghostty_surface_key`. Before pinning a newer version, check that the three
 are still there: each guards against a bug Termora hit in real use.
