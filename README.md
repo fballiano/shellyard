@@ -56,6 +56,14 @@ trust it, so the second command is also necessary. The full name in the
 third command matters too: a different application also called “termora”
 exists in the main cask repository.
 
+To update, use the full name again. With only `termora`, Homebrew replaces
+Termora with that other application:
+
+```bash
+brew update
+brew upgrade --cask fballiano/termora/termora
+```
+
 Or download the zip from the
 [latest release](https://github.com/fballiano/termora/releases/latest) and
 drag **Termora** into **Applications**.

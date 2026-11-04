@@ -5,7 +5,11 @@ name: Release
 # its own tap:
 #
 #   brew tap fballiano/termora https://github.com/fballiano/termora
-#   brew install --cask --no-quarantine termora
+#   brew trust --cask fballiano/termora/termora
+#   brew install --cask fballiano/termora/termora
+#
+# Always use the full name: the main cask repository has a different
+# application that is also called "termora".
 
 on:
   push:
