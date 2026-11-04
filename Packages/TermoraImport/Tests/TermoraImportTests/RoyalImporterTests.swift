@@ -290,7 +290,7 @@ func importsKeySequences() throws {
     let on = try #require(document.connections.first { $0.name == "with-sequence" })
     #expect(on.settings.afterConnectText == .value("cd /opt/maho/app{ENTER}"))
     #expect(KeySequence.steps(from: "cd /opt/maho/app{ENTER}")
-        == [.text("cd /opt/maho/app"), .text("\r")])
+        == [.text("cd /opt/maho/app"), .press(.enter)])
 }
 
 @Test("A sequence switched off in Royal stays off, and its text is kept in the notes")
