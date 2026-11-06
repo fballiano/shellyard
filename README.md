@@ -99,6 +99,7 @@ drag **Termora** into **Applications**.
 | ⌘1 … ⌘9 | Go to a tab |
 | ⇧⌘] / ⇧⌘[ | Next tab / previous tab (also ⌥⌘→ / ⌥⌘←) |
 | ⌘W / ⇧⌘W | Close the tab / close the window |
+| ⌘O | Open a connection: find a bookmark, or type `user@host` |
 | ⌘↩ | Connect to the selected bookmark |
 | ⇧⌘F | Browse the files of the selected bookmark |
 | ⌘N / ⇧⌘N | New connection / new folder |
@@ -124,6 +125,23 @@ comes from.
 - **After connecting** types text into the session when the prompt appears.
   Key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrows, and
   `{DELAY:500}` work.
+
+### Open Connection
+
+Press ⌘O, and type a part of a name, a host, or a folder. Each word that you
+type must appear in one of the three. Use ↑ and ↓ to choose a row. Return
+opens a terminal, and ⌘↩ opens the file browser. Escape closes the field.
+
+To connect to a server that has no bookmark, type its address:
+`host`, `user@host`, `user@host:2222`, or an alias from `~/.ssh/config`.
+The last row says **Connect to …**. When the address has a user name, or
+when no bookmark matches, that row comes first.
+
+A quick connection uses the default settings and stores no password: OpenSSH
+asks for it each time. If you type no port, OpenSSH takes the port from
+`~/.ssh/config`. To keep the server, right-click its tab and select
+**Save as Bookmark**. The bookmark goes to the top level of the tree, and its
+editor opens.
 
 ### Tabs, splits and local shells
 

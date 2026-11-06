@@ -9,14 +9,17 @@ import TermoraModel
 /// Everything the SSH engine needs about one connection, after inheritance.
 public struct SSHTarget: Hashable, Sendable {
     public var host: String
-    public var port: Int
+    /// The TCP port, or `nil` to let OpenSSH choose: the `Port` line of
+    /// `~/.ssh/config`, or 22. A quick connection typed without a port uses
+    /// `nil`, so an alias keeps the port that its configuration names.
+    public var port: Int?
     public var settings: EffectiveSettings
     /// Extra `ssh` options for this connection, for example
     /// `["-o", "UserKnownHostsFile=/dev/null"]`. They are added last, so they
     /// win over the options that the settings produce.
     public var extraOptions: [String]
 
-    public init(host: String, port: Int, settings: EffectiveSettings,
+    public init(host: String, port: Int?, settings: EffectiveSettings,
                 extraOptions: [String] = []) {
         self.host = host
         self.port = port
@@ -58,7 +61,7 @@ public enum SSHCommand {
             "-o", "NumberOfPasswordPrompts=1",
             "-o", "ExitOnForwardFailure=yes",
         ]
-        arguments += ["-p", String(target.port)]
+        if let port = target.port { arguments += ["-p", String(port)] }
         arguments += options(for: target.settings)
         arguments += target.extraOptions
         arguments.append(target.destination)

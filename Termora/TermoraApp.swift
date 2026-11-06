@@ -247,13 +247,19 @@ struct TermoraApp: App {
 
                 Divider()
 
+                Button("Open Connection…") { sessions.showsOpenPanel = true }
+                    .keyboardShortcut("o", modifiers: [.command])
+                    .disabled(!store.isUnlocked)
+
+                // Both items act on the sidebar. They are off while the Open
+                // Connection field is up, so ⌘Return reaches the field.
                 Button("Connect") {
                     if let connection = store.selectedConnection {
                         sessions.open(connection: connection)
                     }
                 }
                 .keyboardShortcut(.return, modifiers: [.command])
-                .disabled(store.selectedConnection == nil)
+                .disabled(store.selectedConnection == nil || sessions.showsOpenPanel)
 
                 Button("Browse Files") {
                     if let connection = store.selectedConnection {
@@ -261,7 +267,7 @@ struct TermoraApp: App {
                     }
                 }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
-                .disabled(store.selectedConnection == nil)
+                .disabled(store.selectedConnection == nil || sessions.showsOpenPanel)
 
                 Divider()
 

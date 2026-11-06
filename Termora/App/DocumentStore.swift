@@ -438,6 +438,20 @@ final class DocumentStore: ObservableObject {
         editingID = connection.id
     }
 
+    /// Adds a bookmark made elsewhere, at the top level, and opens its editor.
+    ///
+    /// The top level, and not the selected folder: a folder could pass down
+    /// a password or a key that the connection never used.
+    func addBookmark(_ connection: Connection) {
+        guard isUnlocked else { return }
+        var connection = connection
+        connection.parentID = nil
+        connection.position = nextPosition(in: nil)
+        update { $0.add(connection) }
+        selection = connection.id
+        editingID = connection.id
+    }
+
     /// Adds a folder next to the selection and opens its editor.
     func addFolder() {
         guard isUnlocked else { return }

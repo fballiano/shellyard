@@ -121,7 +121,7 @@ public final class SSHEngine: ObservableObject {
     ) async -> Bool {
         guard let source = await RemoteTerminfo.source(of: terminal) else { return false }
 
-        let key = "\(connection.target.destination):\(connection.target.port)"
+        let key = "\(connection.target.destination):\(connection.target.port.map(String.init) ?? "default")"
         let fingerprint = RemoteTerminfo.fingerprint(of: source)
         if terminfoCache.holds(fingerprint, for: key) { return true }
 

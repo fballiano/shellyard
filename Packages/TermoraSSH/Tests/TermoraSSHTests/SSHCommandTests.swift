@@ -5,7 +5,7 @@ import Testing
 
 private func target(
     host: String = "web01.example.com",
-    port: Int = 22,
+    port: Int? = 22,
     _ change: (inout EffectiveSettings) -> Void = { _ in }
 ) -> SSHTarget {
     var settings = EffectiveSettings.fallback
@@ -27,6 +27,19 @@ func masterArguments() {
     #expect(arguments.contains("NumberOfPasswordPrompts=1"))
     // The connection must not outlive Termora.
     #expect(arguments.contains("ControlPersist=no"))
+}
+
+@Test("A port goes to the master as -p")
+func masterSendsPort() {
+    let arguments = SSHCommand.master(target: target(port: 2222), controlPath: "/tmp/x.sock")
+    let flag = arguments.firstIndex(of: "-p")
+    #expect(flag.map { arguments[$0 + 1] } == "2222")
+}
+
+@Test("With no port, the master sends no -p, so ~/.ssh/config chooses the port")
+func masterWithoutPort() {
+    let arguments = SSHCommand.master(target: target(port: nil), controlPath: "/tmp/x.sock")
+    #expect(!arguments.contains("-p"))
 }
 
 @Test("A connection with no user name uses the host alone")

@@ -190,6 +190,11 @@ struct MainWindowView: View {
         // A save must be seen without a sheet: the sign floats in the corner
         // while an edited file travels, whatever tab is in front.
         .overlay(alignment: .bottomTrailing) { RemoteEditIndicator() }
+        // The Open Connection field (⌘O) floats over everything, the way
+        // Spotlight does. It never replaces the tabs under it.
+        .overlay {
+            if sessions.showsOpenPanel { OpenConnectionPanel() }
+        }
         // The editor is a sheet, so the terminal keeps the whole window.
         .sheet(item: Binding(
             get: { store.editingID.map(EditTarget.init) },

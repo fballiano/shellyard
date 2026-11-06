@@ -166,6 +166,8 @@ final class SessionsController: ObservableObject {
     @Published var pendingPrompt: PromptRequest?
     @Published var errorMessage: String?
     @Published var paneCloseRequest: PaneCloseRequest?
+    /// The Open Connection field (⌘O) is on screen.
+    @Published var showsOpenPanel = false
 
     /// The remote files open in editors on this Mac. The controller outlives
     /// every browser view, because an editor stays open after its tab closes.
@@ -173,6 +175,10 @@ final class SessionsController: ObservableObject {
 
     private let store: DocumentStore
     private var engineStorage: SSHEngine?
+    /// Connections typed into the Open Connection field. They are not in
+    /// the document, so they live here while a tab uses them. They hold no
+    /// secret: OpenSSH asks for one through the usual sheet.
+    private var quickConnections: [UUID: QuickConnection] = [:]
     private var engineError: String?
 
     init(store: DocumentStore) {
@@ -322,7 +328,7 @@ final class SessionsController: ObservableObject {
                 }
             }
 
-            let target = SSHTarget(host: connection.host, port: connection.port, settings: settings)
+            let target = target(for: connection, settings: settings)
             let sshConnection = await engine.connect(
                 id: connection.id, name: connection.name, target: target
             )
@@ -356,6 +362,61 @@ final class SessionsController: ObservableObject {
                 tabPhaseChanged()
             }
         }
+    }
+
+    /// What OpenSSH gets for a connection. A quick connection typed with
+    /// no port sends none, so an alias keeps the port of `~/.ssh/config`.
+    private func target(for connection: Connection, settings: EffectiveSettings) -> SSHTarget {
+        let port: Int? = if let quick = quickConnections[connection.id] {
+            quick.address.port
+        } else {
+            connection.port
+        }
+        return SSHTarget(host: connection.host, port: port, settings: settings)
+    }
+
+    // MARK: - Quick connections
+
+    /// A connection typed into the Open Connection field, with no bookmark.
+    private struct QuickConnection {
+        let address: QuickConnectAddress
+        let connection: Connection
+    }
+
+    /// Opens a tab on an address that has no bookmark.
+    ///
+    /// The connection takes the default settings, with the user name of the
+    /// address. Nothing is written to the document.
+    func openQuick(_ address: QuickConnectAddress, kind: TerminalTab.Kind = .terminal) {
+        let connection = Connection(
+            name: address.text,
+            host: address.host,
+            port: address.port ?? 22,
+            settings: NodeSettings(
+                username: address.username.isEmpty ? .inherit : .value(address.username)
+            )
+        )
+        quickConnections[connection.id] = QuickConnection(address: address, connection: connection)
+        open(connection: connection, kind: kind)
+    }
+
+    /// True when the tab runs on a typed address that is not a bookmark yet.
+    func isQuick(_ tab: TerminalTab) -> Bool {
+        guard let id = tab.connectionID else { return false }
+        return quickConnections[id] != nil && store.index.connection(id) == nil
+    }
+
+    /// Makes a bookmark of the address that a quick tab runs on.
+    ///
+    /// The bookmark keeps the identifier of the quick connection, so the open
+    /// tabs belong to it at once: the sidebar shows them as live, and ⌘T
+    /// opens the same connection again.
+    func saveAsBookmark(_ tab: TerminalTab) {
+        guard isQuick(tab), let id = tab.connectionID, let quick = quickConnections[id] else {
+            return
+        }
+        store.addBookmark(quick.connection)
+        quickConnections[id] = nil
     }
 
     // MARK: - Local tabs
@@ -449,7 +510,7 @@ final class SessionsController: ObservableObject {
             }
         }
 
-        let target = SSHTarget(host: connection.host, port: connection.port, settings: settings)
+        let target = target(for: connection, settings: settings)
         let sshConnection = await engine.connect(
             id: connection.id, name: connection.name, target: target
         )
@@ -603,7 +664,7 @@ final class SessionsController: ObservableObject {
 
     /// The bookmark a tab belongs to, if it is still in the document.
     func connection(of tab: TerminalTab) -> Connection? {
-        tab.connectionID.flatMap { store.index.connection($0) }
+        tab.connectionID.flatMap { store.index.connection($0) ?? quickConnections[$0]?.connection }
     }
 
     /// True when `duplicate(_:)` can open something for the tab.
@@ -653,6 +714,7 @@ final class SessionsController: ObservableObject {
         if let connectionID = tab.connectionID,
            !tabs.contains(where: { $0.connectionID == connectionID }),
            let engineStorage {
+            quickConnections[connectionID] = nil
             remoteEdits.connectionClosed(connectionID)
             Task { await engineStorage.disconnect(id: connectionID) }
         }

@@ -205,6 +205,9 @@ private struct TabButton: View {
             .disabled(sessions.connection(of: tab) == nil)
         Button("Duplicate") { sessions.duplicate(tab) }
             .disabled(!sessions.canDuplicate(tab))
+        if sessions.isQuick(tab) {
+            Button("Save as Bookmark") { sessions.saveAsBookmark(tab) }
+        }
         Divider()
         Button("Close") { sessions.closeTab(tab.id) }
         Button("Close Other Tabs") { sessions.closeOtherTabs(than: tab.id) }
