@@ -1,7 +1,7 @@
 <div align="center">
 <img src="Docs/icon.png" width="128" alt="Termora" />
 <h1>Termora</h1>
-<p><strong>SSH connections, tunnels and files in one encrypted document.</strong></p>
+<p><strong>An SSH connection manager for macOS, built on the Ghostty terminal engine.</strong></p>
 <p>
 <a href="https://github.com/fballiano/termora/releases/latest"><img src="https://img.shields.io/github/v/release/fballiano/termora?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Latest release" /></a>
 <a href="https://github.com/fballiano/termora/releases"><img src="https://img.shields.io/github/downloads/fballiano/termora/total?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Downloads" /></a>
@@ -20,48 +20,44 @@
 
 ---
 
-Termora is an SSH connection manager for macOS. It keeps your servers, their
-passwords, and their tunnels in one encrypted file, and it opens them in the
-Ghostty terminal engine. It also opens a shell on your Mac, so one window
-holds all of your terminal work.
+Termora keeps your servers in one encrypted file and opens them in tabs, with
+the Ghostty terminal engine and your own Ghostty configuration. A local shell
+sits next to your servers, so all of your terminal work stays in one window.
 
-Termora drives the OpenSSH of macOS. Your `~/.ssh/config`, your keys, and
-your SSH agent all work as they stand.
+Termora does not have its own SSH. It drives the OpenSSH of macOS, so your
+`~/.ssh/config`, your keys, your SSH agent, and your jump hosts work as they
+are.
 
-## Features
+## Highlights
 
-<table>
-<tr><td><b>A bookmark tree</b></td><td>Folders pass credentials and settings down. A connection overrides only what it sets.</td></tr>
-<tr><td><b>Your terminal</b></td><td>The Ghostty engine reads your own Ghostty configuration, so a pane looks like your terminal.</td></tr>
-<tr><td><b>Local shells</b></td><td>A shell on this Mac, beside your servers, so you do not switch to another terminal.</td></tr>
-<tr><td><b>Tabs and splits</b></td><td>Tabs live in the title bar. ⌘T opens a tab like the one in front, ⌘D and ⇧⌘D split.</td></tr>
-<tr><td><b>One connection</b></td><td>One control master carries every pane, every tunnel and the file browser. Nothing authenticates twice.</td></tr>
-<tr><td><b>htop just works</b></td><td>Termora teaches each server what <code>xterm-ghostty</code> is, once. A server that refuses gets <code>xterm-256color</code>.</td></tr>
-<tr><td><b>Live tunnels</b></td><td>Local, remote and SOCKS. A switch opens or closes a tunnel on an open connection, with no reconnect.</td></tr>
-<tr><td><b>A file browser</b></td><td>This Mac on the left, the server on the right. Drag both ways, also to and from Finder.</td></tr>
-<tr><td><b>One encrypted file</b></td><td>AES-256-GCM behind a master password. Put it wherever you sync your files.</td></tr>
-<tr><td><b>Touch ID</b></td><td>The key can stay in the Secure Enclave, so unlock is one touch. The password still works on any Mac.</td></tr>
-<tr><td><b>Royal TSX import</b></td><td>Folders, connections, key sequences and saved passwords come across, with a report of everything that did not.</td></tr>
-<tr><td><b>Agent ready</b></td><td>A bundled <code>termora</code> command lets a script or an AI agent run commands on your servers. No secret reaches the tool.</td></tr>
-</table>
+- **Your servers in a tree.** Folders hold connections, and a folder gives
+  its user name, password, key, and other settings to everything inside it.
+  Colour tags mark production at a glance.
+- **One login per server.** Tabs, splits, tunnels, and the file browser all
+  share one connection, so you type a password or touch a key one time.
+- **A real terminal.** The Ghostty engine reads your Ghostty configuration
+  and theme. Tabs, splits, and local shells, with the shortcuts you know.
+- **Tunnels with a switch.** Local, remote, and SOCKS tunnels open and close
+  on a live connection, with no reconnect.
+- **Files on both sides.** This Mac on the left, the server on the right.
+  Drag files across, to Finder, and from Finder. Edit a remote file in any
+  application on your Mac.
+- **Secrets stay secret.** One file sealed with AES-256-GCM. Unlock with
+  Touch ID. Passwords never go on a command line.
+- **Scripts and AI agents.** `termora run web1 -- uptime` runs a command on a
+  saved server, and the tool never sees a password.
+- **Coming from Royal TSX.** The import brings your folders, connections, and
+  saved passwords, and reports everything that did not come across.
 
 ## Install
 
 Termora needs macOS 26 or later on Apple silicon.
-
-With [Homebrew](https://brew.sh):
 
 ```bash
 brew tap fballiano/termora https://github.com/fballiano/termora
 brew trust --cask fballiano/termora/termora
 brew install --cask fballiano/termora/termora
 ```
-
-This repository is the tap, so the first command includes its URL. Homebrew
-refuses a cask from a tap outside `Homebrew/*` until you trust it, so the
-second command is necessary. Always use the full name
-`fballiano/termora/termora`: the main cask repository has a different
-application that is also called "termora".
 
 To update:
 
@@ -75,9 +71,9 @@ Or download the zip from the
 drag **Termora** into **Applications**.
 
 > [!IMPORTANT]
-> The application has an ad-hoc signature, not an Apple Developer ID, so macOS
-> blocks the first launch. Open **System Settings → Privacy & Security** and
-> select **Open Anyway**, or remove the quarantine mark from a terminal:
+> macOS blocks the first launch, because Termora is not signed with an Apple
+> Developer ID. Open **System Settings → Privacy & Security** and select
+> **Open Anyway**, or run:
 >
 > ```bash
 > xattr -dr com.apple.quarantine /Applications/Termora.app
@@ -85,158 +81,111 @@ drag **Termora** into **Applications**.
 
 ## Getting started
 
-1. Start Termora and select **Create a document…**. Choose a place for the
-   file and a master password. Nobody can recover this password, so keep it
-   safe.
-2. Add your servers. Press ⌘N for a new connection, or ⇧⌘N for a folder. If
-   you use Royal TSX, select **File → Import from Royal TSX…** instead.
-3. Double-click a connection to open it. Select **Local Shell** at the top of
-   the sidebar, or press ⇧⌘T, for a shell on your Mac.
-
-On a different Mac, select **Open a document…** and give the same file and
-password.
-
-## Bookmarks and folders
-
-The sidebar holds a tree of folders and connections. A folder gives its
-settings to everything inside it: user name, password or key, jump host,
-agent forwarding, compression, X11 forwarding, keep-alive, host key policy,
-colour tag, the command before connecting, and the text after connecting. A connection overrides only what it sets itself. The editor
-shows where each value comes from.
-
-- A double-click on a connection opens it.
-- A right-click offers the other actions: connect, browse files, edit,
-  duplicate, and delete.
-- Drag a row to move it into a folder or out of one.
-- The filter at the top finds connections by name or by host.
-- A green dot shows a connection with an open session.
-
-The editor opens as a sheet over the window, so the terminal keeps its room.
-Changes apply immediately.
-
-**Before connecting** is a command that runs on this Mac before the
-connection opens, for example to open a firewall. **After connecting** is
-text that Termora types into the session when the prompt appears. It accepts
-key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrow names, and
-`{DELAY:500}`.
-
-## Tabs, splits and local shells
-
-Every connection opens in a tab in the title bar. A tab can hold several
-panes side by side or one above the other.
-
-**⌘T** opens a new tab like the one in front:
-
-- On a connection tab, it opens the same connection again. The new tab uses
-  the open connection, so nothing asks for a password, and the command before
-  connecting does not run again.
-- On a local tab, it opens a local shell in the same folder.
-- With no tab open, it opens a local shell in your home folder.
-
-**⇧⌘T** always opens a local shell. So does **Local Shell** at the top of the
-sidebar.
-
-A local tab runs your login shell on this Mac, with the same Ghostty engine
-and configuration. Its tab shows the name of the current folder, and a split
-opens in the same folder. When you type `exit`, the pane closes.
+1. Start Termora and select **Create a document…**. Choose where to keep the
+   file and a master password.
+2. Add your servers: ⌘N for a connection, ⇧⌘N for a folder. From Royal TSX,
+   select **File → Import from Royal TSX…** instead.
+3. Double-click a connection to open it.
+4. Press ⇧⌘T, or select **Local Shell** at the top of the sidebar, for a
+   shell on your Mac.
 
 ## Keyboard shortcuts
 
 | Keys | Action |
 | --- | --- |
-| ⌘N | New connection |
-| ⇧⌘N | New folder |
 | ⌘T | New tab like the one in front |
 | ⇧⌘T | New local shell |
+| ⌘D / ⇧⌘D | Split right / split down |
+| ⌘1 … ⌘9 | Go to a tab |
+| ⇧⌘] / ⇧⌘[ | Next tab / previous tab (also ⌥⌘→ / ⌥⌘←) |
+| ⌘W / ⇧⌘W | Close the tab / close the window |
 | ⌘↩ | Connect to the selected bookmark |
 | ⇧⌘F | Browse the files of the selected bookmark |
-| ⌘D | Split right |
-| ⇧⌘D | Split down |
-| ⌘1 … ⌘9 | Go to tab 1 … 9 |
-| ⇧⌘] or ⌥⌘→ | Next tab |
-| ⇧⌘[ or ⌥⌘← | Previous tab |
-| ⌘W | Close the tab |
-| ⇧⌘W | Close the window |
+| ⌘N / ⇧⌘N | New connection / new folder |
 | ⌃⌘L | Lock the document |
 
-## Tunnels
+## Guide
 
-A connection holds a list of tunnels: local, remote, or dynamic (SOCKS). You
-edit them in the editor of the connection.
+### Bookmarks and folders
 
-When the connection is closed, a checkbox decides if a tunnel opens with it.
-When the connection is open, the checkbox becomes a switch that opens or
-closes that tunnel immediately. Nothing reconnects.
+Double-click a connection to open it. Right-click a row for the other
+actions: connect, browse files, edit, duplicate, and delete. Drag rows to
+move them between folders. The filter finds a connection by its name or its
+host. A green dot marks a server with an open session.
 
-Every row says in words what the tunnel does, for example
-`localhost:8080 → localhost:80`, so you can see two ports in the wrong order
-before you connect. The editor also tells you about a port that OpenSSH will
-refuse, and about two tunnels on the same port.
+A folder gives its settings to everything inside it: user name, password or
+key, jump host, agent forwarding, compression, X11 forwarding, keep-alive,
+host key policy, colour tag, and the two commands below. A connection
+overrides only what it sets itself, and the editor shows where each value
+comes from.
 
-## Files
+- **Before connecting** runs a command on your Mac before the connection
+  opens, for example to open a firewall.
+- **After connecting** types text into the session when the prompt appears.
+  Key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrows, and
+  `{DELAY:500}` work.
 
-**Session → Browse Files** (⇧⌘F) opens a file browser in its own tab. This
-Mac is on the left and the server is on the right. The browser uses the open
-connection, so nothing asks for a password again, and it does not disturb
-your terminal panes.
+### Tabs, splits and local shells
 
-- Drag files or folders from one side to the other to copy them. A progress
-  bar shows the whole copy, also for a large folder.
-- Drag files from Finder into the list to copy them to the server, and drag
-  rows out of the list to copy them to Finder.
+⌘T opens a new tab like the one in front. On a connection, that is the same
+server again, with no new login. On a local shell, it is a local shell in the
+same folder. With no tab open, it is a local shell in your home folder.
+
+⇧⌘T, or **Local Shell** in the sidebar, always opens a local shell. A local
+tab shows the name of its current folder, and a split opens in that folder.
+
+### Tunnels
+
+Edit the tunnels of a connection in its editor. While the connection is
+closed, a checkbox decides if a tunnel opens with it. While it is open, the
+checkbox becomes a switch that opens or closes the tunnel immediately.
+
+Each row says in words what the tunnel does, for example
+`localhost:8080 → localhost:80`. The editor warns you about a port that
+OpenSSH will refuse and about two tunnels on the same port.
+
+### Files
+
+**Session → Browse Files** (⇧⌘F) opens a file browser in its own tab, on the
+same connection as your terminals.
+
+- Drag files and folders between the two sides, to Finder, and from Finder.
+  One progress bar covers the whole copy.
 - Rename, make folders, and delete on both sides.
 - Double-click a remote file to open it in an application on your Mac. When
   you save it, Termora copies it back. If the file changed on the server in
-  the meantime, Termora asks before it overwrites it.
+  the meantime, Termora asks first.
 
-A folder copy leaves out symbolic links, so a link that points to its own
-parent cannot make the copy run forever. The count of skipped links shows at
-the end.
+### Terminal appearance
 
-## Terminal appearance
-
-Termora reads your own Ghostty configuration file, so a pane looks the same as
-your Ghostty window. It looks in this order:
+Termora reads your Ghostty configuration file, in this order, and never
+writes to it:
 
 1. `$XDG_CONFIG_HOME/ghostty/config`
 2. `~/.config/ghostty/config`
 3. `~/Library/Application Support/com.mitchellh.ghostty/config`
 
-Fonts, colours, and a `theme = <name>` line all work, also in the
-`light:One,dark:Two` form. Termora never writes to the file.
+Fonts, colours, and `theme = <name>` all work, also as
+`theme = light:One,dark:Two`.
 
-Ghostty calls itself `xterm-ghostty`, and most servers do not know that name.
-Programs such as `htop`, `vim`, and `less` then stop with
-`Error opening terminal`. To prevent this, Termora installs the description
-on each server one time, in `~/.terminfo` in your home folder there. If the
-server cannot accept it (no `tic`, or a read-only home folder), Termora uses
-`xterm-256color`, which every server knows.
+### Security
 
-## Security
+- The document is sealed with AES-256-GCM. Your master password becomes the
+  key through PBKDF2-HMAC-SHA512 with 600,000 rounds. Every host name and
+  every secret is inside the sealed part.
+- With Touch ID on, the key is sealed by the Secure Enclave of this Mac. The
+  master password still opens the file on any Mac.
+- The lock in the title bar, or ⌃⌘L, closes every session and every tunnel.
+  **Settings** can also lock the document after a time of rest or when the
+  Mac sleeps.
+- Termora gives each password to OpenSSH through `SSH_ASKPASS` and a private
+  socket. A password never goes into a command line, into the environment,
+  or into a file.
 
-- **One encrypted file.** The document is sealed with AES-256-GCM. The key
-  comes from your master password through PBKDF2-HMAC-SHA512 with 600,000
-  rounds. Every host name and every secret is inside the sealed part.
-- **Touch ID.** You can unlock with Touch ID. The key then stays sealed by
-  the Secure Enclave of this Mac. The master password still opens the file on
-  any Mac.
-- **Lock.** Select the lock in the title bar, or press ⌃⌘L. In
-  **Settings**, the document can also lock after a time of rest or when the
-  Mac sleeps. A lock closes every session and every tunnel.
-- **No secret on a command line.** Termora gives each password to OpenSSH
-  through `SSH_ASKPASS` and a private socket. A password never goes into a
-  command line, into the environment, or into a file.
-- **Your own OpenSSH.** Termora runs `/usr/bin/ssh`. It does not have its own
-  SSH or SFTP cryptography.
+### Scripts and AI agents
 
-## Driving Termora from an agent or a script
-
-The application includes a small command-line tool, `termora`. A script or
-an AI agent can use it to list your bookmarks and to run commands on your
-servers. The tool never sees a password: it sends one request to the running
-application, and the application does the rest.
-
-A Homebrew install puts `termora` on your PATH. Without Homebrew, call
+The `termora` command comes with the application. A Homebrew install puts it
+on your PATH. Otherwise, call
 `/Applications/Termora.app/Contents/MacOS/termora-cli`.
 
 ```bash
@@ -245,23 +194,15 @@ termora status                # every open connection: name, state, tunnels
 termora run web1 -- uptime    # run a command on a bookmark
 ```
 
-`run` opens the connection when it is closed, the same as a double-click. If
-OpenSSH needs an answer, the question appears in Termora, and the tool waits.
-The output streams as it arrives, and the exit code of the remote command
-becomes the exit code of `termora`.
+`run` opens the connection if it is closed. If OpenSSH asks a question, the
+question appears in Termora, and the command waits. The output streams as it
+arrives, and the exit code of the remote command is the exit code of
+`termora`. The command gets nothing while the document is locked. Exit code 2
+means that Termora is not running, that the document is locked, or that the
+request was refused.
 
-The tool works only while a document is open. When the document is locked,
-the tool gets no data, not even the bookmark names. Exit code 2 means that
-Termora is not running, that the document is locked, or that Termora refused
-the request. The reason is on standard error.
-
-### Teaching your agent
-
-`termora --help` prints the whole contract: the three commands, the format of
-the output, the exit codes, and the rule that no password reaches the tool.
-Most agents read the help before they use a command, so this is often enough.
-
-The `Agents/` folder holds the same text in the format of each agent:
+`termora --help` prints the whole contract, which is often enough for an
+agent. For a fixed setup, install the instructions for your agent:
 
 | Agent | How to install it |
 |---|---|
@@ -270,55 +211,62 @@ The `Agents/` folder holds the same text in the format of each agent:
 | Gemini CLI | `gemini extensions install https://github.com/fballiano/termora` |
 | Cursor | Copy `Agents/cursor/termora.mdc` into `.cursor/rules/` |
 
-The shortest form, for a project `AGENTS.md` or `CLAUDE.md`:
+In Claude Code, allow the command with the permission `Bash(termora:*)`.
 
-```
-`termora run <bookmark> -- <command…>` runs a command on a saved SSH server; `termora list` names the bookmarks.
-```
+### Importing from Royal TSX
 
-Most agents ask before they run a new command. In Claude Code the permission
-is `Bash(termora:*)`. Without it, the agent reports that the command was
-blocked. That is not a Termora problem.
+**File → Import from Royal TSX…** adds the folders and connections of an
+`.rtsz` document to the open document. Nothing that is already there is
+removed.
 
-## Importing from Royal TSX
+- **Passwords.** Termora asks Royal TSX for each saved password through
+  AppleScript. The first time, macOS asks if Termora can control Royal TSX:
+  answer yes. If Royal TSX is not available, the import still runs, and the
+  report names each password that you must type.
+- **Key sequences** become the text after connecting. **Tasks** before
+  connecting become the command before connecting. A task that puts
+  `$PASSWORD$` on its command line is refused.
+- **Key and password.** Royal TSX lets an entry have both. A Termora
+  connection uses one, so the import asks which one to keep.
+- **The report** lists every entry, password, and setting that did not come
+  across, and why.
 
-**File → Import from Royal TSX…** reads an `.rtsz` document and adds its
-folders and connections to the open document. Nothing in the open document
-is removed. A connection that took its credentials from a folder in Royal TSX
-still takes them from that folder in Termora.
+## FAQ
 
-**Passwords.** Royal TSX encrypts saved passwords in a private format.
-Termora does not try to read that format: it asks Royal TSX for each
-password through AppleScript. The first time, macOS asks if Termora can
-control Royal TSX. Answer yes. If Royal TSX is not installed or refuses, the
-import still runs, and the report names each entry whose password you must
-type.
+**Does Termora use my `~/.ssh/config`?**
+Yes. Termora runs `/usr/bin/ssh`, so everything in your SSH configuration
+applies: host aliases, keys, certificates, FIDO keys, the agent, and
+`known_hosts`.
 
-**The report.** Nothing is dropped without a word. The report lists the
-entries that did not come across and why (for example Telnet, a serial port,
-or an entry in the trash), the passwords that Royal TSX did not give, and the
-settings that Termora does not have.
+**Why does Termora write a file in `~/.terminfo` on my servers?**
+Ghostty says that its terminal type is `xterm-ghostty`, and most servers do
+not know that name. Without the description, `htop`, `vim`, and `less` stop
+with `Error opening terminal`. Termora installs the description one time, in
+`~/.terminfo/78/xterm-ghostty`. If a server cannot accept it, Termora uses
+`xterm-256color` for that server.
 
-**Key sequences.** A key sequence written in the entry comes across as it
-is, for example `cd /opt/app{ENTER}`, and becomes the text after connecting.
-A key sequence that was off in Royal TSX stays off, and its text goes into
-the notes. A key sequence that Royal TSX keeps by name only cannot come
-across, and the report names it.
+**How do I use the same bookmarks on two Macs?**
+Put the document in a folder that you sync, such as iCloud Drive, and open
+it on the other Mac with **Open a document…** and the same master password.
 
-**Tasks.** A Royal TSX task that runs before connecting becomes the command
-before connecting. Termora refuses a task that puts `$PASSWORD$` on its
-command line, because every process on the Mac can read a command line. A
-task that runs after disconnecting is reported, not imported.
+**I forgot my master password. Can I recover the document?**
+No. Nobody can recover the password. If Touch ID is on for the document, it
+still opens the document on that Mac, but a new password needs the current
+one.
 
-**Key or password.** Royal TSX lets an entry have a private key and a
-password at the same time. A Termora connection uses one method, so the
-import asks which one to keep. The default is the password, because you can
-type a key path again, but you cannot recover a lost password.
+**What happens to my sessions when the document locks?**
+Every session and every tunnel closes, local shells too. Nothing stays open
+behind a locked document.
 
-## Building from source
+**Why must I type the full Homebrew name?**
+The main Homebrew cask repository has a different application that is also
+called "termora". With the short name, Homebrew installs or upgrades that
+application.
 
-See [Docs/DEVELOPMENT.md](Docs/DEVELOPMENT.md) for the build, the tests, the
-code layout, and the design notes.
+## Development
+
+See [Docs/DEVELOPMENT.md](Docs/DEVELOPMENT.md) to build Termora, run the
+tests, and read about its design.
 
 ## Licence
 
