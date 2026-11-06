@@ -123,8 +123,10 @@ tools once: a restricted entitlement with no provisioning profile gets a
 program killed at launch, and nobody would see it in a tool.
 
 The workflow needs one repository variable and five secrets. Run
-`Scripts/setup-signing.sh`: it walks you through the certificate, the
-App Store Connect API key, and `gh`, and it writes nothing to disk.
+`Scripts/setup-signing.sh` in a terminal of its own: it walks you through
+the certificate, the App Store Connect API key, and `gh`, and it writes
+nothing to disk. It makes the certificate on the developer website, because
+Xcode refuses unless it is signed in with the Account Holder's Apple ID.
 
 | Name | Kind | What it is |
 | --- | --- | --- |
