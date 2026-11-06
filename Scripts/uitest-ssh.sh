@@ -12,7 +12,11 @@ cd "$(dirname "$0")/.."
 
 only=${1:-TermoraUITests/TabSwitchDuringConnectTests}
 
-dir=$(mktemp -d "${TMPDIR:-/tmp}/termora-uitest-sshd.XXXXXX")
+# TMPDIR ends with a slash on macOS. Without the strip, the path holds
+# "//", Termora passes the key path on with one "/", and the pkill in the
+# trap below never matches the control masters the application leaves.
+tmp=${TMPDIR:-/tmp}
+dir=$(mktemp -d "${tmp%/}/termora-uitest-sshd.XXXXXX")
 chmod 700 "$dir"
 sshd_pid=""
 # Also end the ssh control masters the application leaves behind: they name
