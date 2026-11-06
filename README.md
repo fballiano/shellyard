@@ -32,6 +32,7 @@ engine through libghostty, and it drives the OpenSSH of macOS, so your
 <tr><td><b>One connection</b></td><td>One control master carries every pane, every tunnel and the file browser. Nothing authenticates twice.</td></tr>
 <tr><td><b>htop just works</b></td><td>Termora teaches each server what <code>xterm-ghostty</code> is, once, over the connection it already has. A server that refuses hears <code>xterm-256color</code>.</td></tr>
 <tr><td><b>Tabs and splits</b></td><td>Tabs live in the title bar. ⌘D splits right, ⇧⌘D splits down, ⌘1…⌘9 switch, ⌥⌘← and ⌥⌘→ walk.</td></tr>
+<tr><td><b>Local shells</b></td><td>A shell on this Mac, beside your servers. ⌘T opens a new tab like the one in front: the same connection, or a local shell in the same folder. ⇧⌘T always opens a local shell.</td></tr>
 <tr><td><b>Live tunnels</b></td><td>Local, remote and SOCKS. A switch opens or closes a tunnel on an open connection, with no reconnect.</td></tr>
 <tr><td><b>A file browser</b></td><td>This Mac on the left, the far host on the right. Drag both ways, with Finder file promises.</td></tr>
 <tr><td><b>One encrypted file</b></td><td>AES-256-GCM behind a master password. Put it wherever you sync your files.</td></tr>
@@ -260,6 +261,28 @@ A double click on a connection opens it. A right click offers the rest:
 connect, browse files, edit, duplicate, delete. The editor appears as a sheet
 over the window rather than a panel beside it, so the terminal keeps the room.
 
+### Local shells
+
+Termora also opens a shell on this Mac, so you do not have to switch to
+another terminal for local work. A local tab runs your login shell through the
+same Ghostty engine, with your own Ghostty configuration.
+
+- **Local Shell**, at the top of the sidebar, opens a local tab. It sits above
+  the filter, because the filter finds bookmarks only.
+- **⌘T** opens a new tab like the one in front. On a connection tab it opens
+  the same connection again, on the live control master, so nothing asks for a
+  password and the command before connecting does not run again. On a local
+  tab it opens a local shell in the same folder. With no tab, it opens a local
+  shell in your home folder.
+- **⇧⌘T** always opens a local shell.
+- A split in a local tab opens a local shell in the folder of the focused
+  pane.
+- A local tab shows the name of its folder, when the shell reports it
+  (OSC 7). `exit` closes the pane, the same as in Ghostty.
+
+A local tab has no connection, no secrets and no askpass. When the document
+locks, local tabs close with every other tab.
+
 ### Files
 
 **Session, Browse Files** opens a file browser in its own tab. It has two
@@ -476,6 +499,8 @@ nothing and returns the whole log as one line. Use
   connection. Local, remote, and SOCKS are each proved against a real server.
 - **Phase 6, done.** The SFTP version 3 client and the file browser, proved
   against a real SFTP server and over a real SSH connection.
+- **Phase 7, done.** Local shells, and ⌘T for a new tab like the one in
+  front.
 
 ### Not done yet
 

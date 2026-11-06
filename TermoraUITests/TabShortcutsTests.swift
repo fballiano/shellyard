@@ -91,6 +91,33 @@ final class TabShortcutsTests: XCTestCase {
         XCTAssertTrue(waitUntilSelected(beta), "⌘2 must choose the second tab.")
     }
 
+    /// ⌘T on a connection tab opens a second tab on the same connection.
+    /// ⇧⌘T opens a local tab, whatever tab is in front.
+    func testNewTabFollowsTheTabInFront() throws {
+        let app = launchApp()
+        let main = window(of: app)
+        unlock(main)
+
+        _ = openTab(named: "alpha", in: main)
+        // One tab can answer the query with more than one element, so the
+        // test compares the count with the count before ⌘T.
+        let alphaTabs = main.descendants(matching: .any).matching(identifier: "tab-alpha")
+        let before = alphaTabs.count
+
+        app.typeKey("t", modifierFlags: [.command])
+        let more = expectation(for: NSPredicate { _, _ in alphaTabs.count > before },
+                               evaluatedWith: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [more], timeout: 10), .completed,
+                       "⌘T on a connection tab must open the same connection again.")
+        // Give the new pane time to take the keyboard, so ⇧⌘T goes through
+        // a pane, not through an empty window.
+        sleep(2)
+
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        let local = main.descendants(matching: .any).matching(identifier: "tab-Local").firstMatch
+        XCTAssertTrue(local.waitForExistence(timeout: 5), "⇧⌘T must open a local tab.")
+    }
+
     // MARK: - Helpers
 
     private func launchApp() -> XCUIApplication {

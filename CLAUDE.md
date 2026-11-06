@@ -87,7 +87,8 @@ packages in `Packages/`:
   a bug Termora hit.
 
 In the app target, `Termora/Terminal/` is the only code that calls
-libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits;
+libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits
+(a `TerminalTab` with no `connectionID` is a local shell tab);
 `Termora/UI/` is the SwiftUI layer.
 
 ## Traps that have already cost time
@@ -98,6 +99,12 @@ libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits;
   — the tab goes permanently blank. Use
   `SessionsController.updateVisibility()` / `isSurfaceVisible` to stop
   drawing instead.
+- **Do not use `.searchable` in the sidebar.** With `placement: .sidebar`
+  the system draws its field above all other sidebar content, so nothing can
+  sit above the filter. `SidebarView` has its own `FilterField` for this.
+- **A new menu shortcut must also go in `GhosttyEnvironment.menuKeyTriggers`.**
+  A focused pane takes every key that Ghostty binds (⌘T is `new_tab`), and the
+  menu never sees it.
 - **Do not pass an empty `TerminalTheme()`** — the package then paints its own
   colors over the user's Ghostty config. See `GhosttyEnvironment`.
 - **A UI test target must not link a package the app also links** beyond what

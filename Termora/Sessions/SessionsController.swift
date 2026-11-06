@@ -10,6 +10,8 @@ import TermoraModel
 import TermoraSSH
 
 /// One tab: a connection, and either the panes or the files open on it.
+///
+/// A local tab has no connection. Its panes run your login shell on this Mac.
 @MainActor
 final class TerminalTab: Identifiable, ObservableObject {
     enum Phase: Equatable {
@@ -32,8 +34,10 @@ final class TerminalTab: Identifiable, ObservableObject {
     var browser: FileBrowserModel?
     /// What the command before connecting printed, as it prints it.
     @Published var commandLog: String = ""
-    let connectionID: UUID
-    let connectionName: String
+    /// The bookmark the tab belongs to. `nil` for a local tab.
+    let connectionID: UUID?
+    /// The name of the bookmark, or "Local" for a local tab.
+    let name: String
     let colorTag: ColorTag
 
     @Published var phase: Phase = .connecting
@@ -42,21 +46,48 @@ final class TerminalTab: Identifiable, ObservableObject {
 
     init(connectionID: UUID, connectionName: String, colorTag: ColorTag) {
         self.connectionID = connectionID
-        self.connectionName = connectionName
+        name = connectionName
         self.colorTag = colorTag
     }
 
+    /// A tab for shells on this Mac.
+    private init(localNamed name: String) {
+        connectionID = nil
+        self.name = name
+        colorTag = .none
+    }
+
+    static func local() -> TerminalTab {
+        TerminalTab(localNamed: "Local")
+    }
+
+    var isLocal: Bool { connectionID == nil }
+
     var panes: [TerminalSession] { root?.panes ?? [] }
 
+    var focusedPane: TerminalSession? {
+        panes.first { $0.id == focusedPaneID }
+    }
+
+    /// The name to show for the tab. A local tab shows the folder of its
+    /// focused shell, so two local tabs can be told apart.
     var title: String {
-        guard let focusedPaneID,
-              let pane = panes.first(where: { $0.id == focusedPaneID })
-        else { return connectionName }
-        return pane.title.isEmpty ? connectionName : connectionName
+        guard isLocal else { return name }
+        return Self.folderName(focusedPane?.workingDirectory) ?? name
+    }
+
+    /// The last part of a path, or `~` for your home folder.
+    static func folderName(_ path: String?) -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        if url.path == home { return "~" }
+        return url.lastPathComponent
     }
 
     var iconName: String {
-        kind == .files ? "folder" : "terminal"
+        if isLocal { return "laptopcomputer" }
+        return kind == .files ? "folder" : "terminal"
     }
 
     func adopt(_ session: TerminalSession) {
@@ -261,10 +292,14 @@ final class SessionsController: ObservableObject {
         tabs.append(tab)
         selectedTabID = tab.id
 
+        // A second tab on a live master opens no new connection. The command
+        // before connecting and the tunnels already ran for the first tab.
+        let alreadyOpen = engine.connection(for: connection.id)?.isConnected ?? false
+
         Task {
             // Royal TSX calls this a task. It runs on this Mac before the
             // connection opens, for example to open a firewall.
-            if !settings.beforeConnect.isEmpty {
+            if !alreadyOpen, !settings.beforeConnect.isEmpty {
                 tab.phase = .running(settings.beforeConnect.name)
                 tabPhaseChanged()
                 tab.commandLog = ""
@@ -312,7 +347,7 @@ final class SessionsController: ObservableObject {
                     tab.phase = .ready
                     tabPhaseChanged()
                 }
-                await startForwards(of: connection, on: sshConnection)
+                if !alreadyOpen { await startForwards(of: connection, on: sshConnection) }
             case let .failed(reason):
                 tab.phase = .failed(reason)
                 tabPhaseChanged()
@@ -320,6 +355,36 @@ final class SessionsController: ObservableObject {
                 tab.phase = .failed("The connection did not open.")
                 tabPhaseChanged()
             }
+        }
+    }
+
+    // MARK: - Local tabs
+
+    /// Opens a tab with your login shell on this Mac.
+    ///
+    /// The shell starts in `directory`, or in your home folder.
+    func openLocal(in directory: String? = nil) {
+        let tab = TerminalTab.local()
+        tab.adopt(makeLocalSession(in: directory))
+        tabs.append(tab)
+        selectedTabID = tab.id
+        updateVisibility()
+    }
+
+    /// The ⌘T command.
+    ///
+    /// On a connection tab, it opens a terminal on the same connection. On a
+    /// local tab, it opens a local shell in the same folder. With no tab, or
+    /// when the bookmark is gone, it opens a local shell in your home folder.
+    func newTab() {
+        guard let tab = selectedTab else {
+            openLocal()
+            return
+        }
+        if let connection = connection(of: tab) {
+            open(connection: connection, kind: .terminal)
+        } else {
+            openLocal(in: tab.isLocal ? tab.focusedPane?.workingDirectory : nil)
         }
     }
 
@@ -473,11 +538,33 @@ final class SessionsController: ObservableObject {
     }
 
     private func makeSession(on sshConnection: SSHConnection, title: String) -> TerminalSession {
-        let session = TerminalSession(launch: TerminalLaunch(
+        wire(TerminalSession(launch: TerminalLaunch(
             command: sshConnection.terminalCommandLine(),
             waitAfterCommand: true,
             title: title
-        ))
+        )))
+    }
+
+    /// A login shell on this Mac. When the shell exits, its pane closes, the
+    /// way it does in Ghostty.
+    private func makeLocalSession(in directory: String?) -> TerminalSession {
+        var launch = TerminalLaunch.loginShell
+        launch.workingDirectory = Self.existingDirectory(directory)
+            ?? FileManager.default.homeDirectoryForCurrentUser.path
+        return wire(TerminalSession(launch: launch))
+    }
+
+    /// The folder, if it is still a folder on this Mac.
+    private static func existingDirectory(_ path: String?) -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory),
+              isDirectory.boolValue
+        else { return nil }
+        return path
+    }
+
+    private func wire(_ session: TerminalSession) -> TerminalSession {
         session.onRequestClose = { [weak self] session, processAlive in
             // A pane whose program still runs is not closed on the spot: the
             // view asks first. A finished pane goes at once.
@@ -493,11 +580,16 @@ final class SessionsController: ObservableObject {
     // MARK: - Panes and tabs
 
     func splitFocusedPane(axis: Axis) {
-        guard let tab = selectedTab, tab.kind == .terminal,
-              let sshConnection = engineStorage?.connection(for: tab.connectionID),
-              sshConnection.isConnected
-        else { return }
-        tab.split(axis: axis, with: makeSession(on: sshConnection, title: tab.connectionName))
+        guard let tab = selectedTab, tab.kind == .terminal, tab.phase == .ready else { return }
+        if tab.isLocal {
+            tab.split(axis: axis, with: makeLocalSession(in: tab.focusedPane?.workingDirectory))
+        } else {
+            guard let connectionID = tab.connectionID,
+                  let sshConnection = engineStorage?.connection(for: connectionID),
+                  sshConnection.isConnected
+            else { return }
+            tab.split(axis: axis, with: makeSession(on: sshConnection, title: tab.name))
+        }
         updateVisibility()
     }
 
@@ -511,11 +603,21 @@ final class SessionsController: ObservableObject {
 
     /// The bookmark a tab belongs to, if it is still in the document.
     func connection(of tab: TerminalTab) -> Connection? {
-        store.index.connection(tab.connectionID)
+        tab.connectionID.flatMap { store.index.connection($0) }
     }
 
-    /// Opens a second tab on the same bookmark, of the same kind.
+    /// True when `duplicate(_:)` can open something for the tab.
+    func canDuplicate(_ tab: TerminalTab) -> Bool {
+        tab.isLocal || connection(of: tab) != nil
+    }
+
+    /// Opens a second tab on the same bookmark, of the same kind. A local tab
+    /// gets a second local shell in the same folder.
     func duplicate(_ tab: TerminalTab) {
+        if tab.isLocal {
+            openLocal(in: tab.focusedPane?.workingDirectory)
+            return
+        }
         guard let connection = connection(of: tab) else { return }
         open(connection: connection, kind: tab.kind)
     }
@@ -548,10 +650,11 @@ final class SessionsController: ObservableObject {
 
         // Close the connection when no other tab is using it. Its edits end
         // too: with the master gone, a save could never be copied back.
-        let stillUsed = tabs.contains { $0.connectionID == tab.connectionID }
-        if !stillUsed, let engineStorage {
-            remoteEdits.connectionClosed(tab.connectionID)
-            Task { await engineStorage.disconnect(id: tab.connectionID) }
+        if let connectionID = tab.connectionID,
+           !tabs.contains(where: { $0.connectionID == connectionID }),
+           let engineStorage {
+            remoteEdits.connectionClosed(connectionID)
+            Task { await engineStorage.disconnect(id: connectionID) }
         }
 
         if selectedTabID == tabID {

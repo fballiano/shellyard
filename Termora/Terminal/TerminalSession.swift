@@ -32,7 +32,7 @@ struct TerminalLaunch: Equatable, Sendable {
         self.title = title
     }
 
-    /// A local login shell. Used for the local terminal and for smoke tests.
+    /// A local login shell, for a local tab.
     static var loginShell: TerminalLaunch {
         TerminalLaunch(waitAfterCommand: false, title: "Shell")
     }
@@ -77,6 +77,18 @@ final class TerminalSession: Identifiable, ObservableObject {
     /// The title to show on a tab. The program's own title wins when it sets one.
     var title: String {
         state.title.isEmpty ? launch.title : state.title
+    }
+
+    /// The folder the shell is in, as the shell reports it (OSC 7).
+    ///
+    /// A shell that reports nothing leaves this `nil`. A `file://` address
+    /// becomes a plain path.
+    var workingDirectory: String? {
+        guard let reported = state.workingDirectory, !reported.isEmpty else { return nil }
+        if reported.hasPrefix("file://"), let url = URL(string: reported) {
+            return url.path
+        }
+        return reported
     }
 
     /// Stop drawing a pane that is hidden behind another tab. The grid, the

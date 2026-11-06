@@ -23,7 +23,8 @@ struct TerminalTabsView: View {
                 ContentUnavailableView(
                     "No session",
                     systemImage: "terminal",
-                    description: Text("Double-click a connection in the sidebar to open it.")
+                    description: Text("Double-click a connection in the sidebar to open it, "
+                        + "or press ⌘T for a shell on this Mac.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -98,8 +99,10 @@ private struct TabButton: View {
 
     var body: some View {
         HStack(spacing: 5) {
+            // A local tab has no connection, so it has no status to show.
+            // The empty dot keeps its icon in line with the other tabs.
             Circle()
-                .fill(statusColor)
+                .fill(tab.isLocal ? .clear : statusColor)
                 .frame(width: 6, height: 6)
             // The colour tag tints the icon, the way the sidebar does. It
             // must not touch the status dot: a red Production tag and a red
@@ -107,7 +110,7 @@ private struct TabButton: View {
             Image(systemName: tab.iconName)
                 .font(.system(size: 10))
                 .foregroundStyle(tagTint)
-            Text(tab.connectionName)
+            TabTitle(tab: tab)
                 .font(.system(size: 12))
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -144,12 +147,12 @@ private struct TabButton: View {
         .contentShape(Rectangle())
         .onTapGesture { sessions.selectedTabID = tab.id }
         .onHover { isHovering = $0 }
-        .help(tab.connectionName)
+        .help(tab.isLocal ? (tab.focusedPane?.workingDirectory ?? tab.name) : tab.name)
         .contextMenu { menu }
         // A name a test can ask for. Without it, a test looking for the tab
         // finds the sidebar row of the same name and passes while the tab bar
         // draws nothing at all.
-        .accessibilityIdentifier("tab-\(tab.connectionName)")
+        .accessibilityIdentifier("tab-\(tab.name)")
         // The chosen tab says so, for VoiceOver and for the tests.
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
@@ -201,7 +204,7 @@ private struct TabButton: View {
         Button("Browse Files") { sessions.openFiles(for: tab) }
             .disabled(sessions.connection(of: tab) == nil)
         Button("Duplicate") { sessions.duplicate(tab) }
-            .disabled(sessions.connection(of: tab) == nil)
+            .disabled(!sessions.canDuplicate(tab))
         Divider()
         Button("Close") { sessions.closeTab(tab.id) }
         Button("Close Other Tabs") { sessions.closeOtherTabs(than: tab.id) }
@@ -231,6 +234,31 @@ private struct TabButton: View {
     }
 }
 
+/// The name on a tab.
+///
+/// A local tab follows the folder of its focused shell. The view watches
+/// that pane, because the tab itself does not publish a change of folder.
+private struct TabTitle: View {
+    @ObservedObject var tab: TerminalTab
+
+    var body: some View {
+        if tab.isLocal, let pane = tab.focusedPane {
+            LocalFolderName(state: pane.state, fallback: tab.name)
+        } else {
+            Text(tab.name)
+        }
+    }
+}
+
+private struct LocalFolderName: View {
+    @ObservedObject var state: TerminalViewState
+    let fallback: String
+
+    var body: some View {
+        Text(TerminalTab.folderName(state.workingDirectory) ?? fallback)
+    }
+}
+
 private struct TabContent: View {
     @ObservedObject var tab: TerminalTab
     @EnvironmentObject private var sessions: SessionsController
@@ -254,7 +282,7 @@ private struct TabContent: View {
         case .connecting:
             VStack(spacing: 12) {
                 ProgressView()
-                Text("Connecting to \(tab.connectionName)…")
+                Text("Connecting to \(tab.name)…")
                     .foregroundStyle(.secondary)
                 Text("Answer any question that appears.")
                     .font(.footnote)
@@ -271,7 +299,7 @@ private struct TabContent: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 32))
                     .foregroundStyle(.orange)
-                Text("Termora could not connect to \(tab.connectionName).")
+                Text("Termora could not connect to \(tab.name).")
                 Text(reason)
                     .font(.footnote)
                     .foregroundStyle(.secondary)

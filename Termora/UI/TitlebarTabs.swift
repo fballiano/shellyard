@@ -179,7 +179,7 @@ private struct TitlebarRow: View {
                         Button {
                             sessions.selectedTabID = tab.id
                         } label: {
-                            Label(tab.connectionName, systemImage: tab.iconName)
+                            Label(tab.title, systemImage: tab.iconName)
                         }
                     }
                 } label: {

@@ -18,39 +18,20 @@ struct SidebarView: View {
     @State private var dropMark: SidebarDropMark?
 
     var body: some View {
-        // A `List` is not used here. On a Mac it draws sidebar rows far
-        // apart, and neither `listRowInsets` nor a row height changes that.
-        // A stack draws exactly the height each row asks for.
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(store.visibleRows()) { row in
-                    SidebarRow(row: row, mark: $dropMark)
-                }
-
-                // The space under the last row takes a drop too, so a node can
-                // be moved out of every folder and back to the top level.
-                Color.clear
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .contentShape(Rectangle())
-                    .onDrop(
-                        of: [.termoraNode],
-                        delegate: TopLevelDropDelegate(
-                            store: store,
-                            isTargeted: $isTopLevelTarget,
-                            mark: $dropMark
-                        )
-                    )
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .strokeBorder(isTopLevelTarget ? Color.accentColor : .clear)
-                            .padding(.horizontal, 2)
-                    )
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        // The local shell sits above the filter: it is not a bookmark, so
+        // the filter does not find it and must not hide it. `.searchable`
+        // is not used, because the system then draws its field above
+        // everything else in the column.
+        VStack(spacing: 0) {
+            LocalShellButton()
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+            Divider()
+            FilterField(text: $store.filterText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+            tree
         }
-        .searchable(text: $store.filterText, placement: .sidebar, prompt: "Filter")
         .alert(
             store.deletingID.flatMap { store.deletionQuestion(for: $0)?.title } ?? "Delete?",
             isPresented: Binding(
@@ -100,6 +81,116 @@ struct SidebarView: View {
     }
 }
 
+private extension SidebarView {
+    /// The bookmark tree.
+    ///
+    /// A `List` is not used here. On a Mac it draws sidebar rows far apart,
+    /// and neither `listRowInsets` nor a row height changes that. A stack
+    /// draws exactly the height each row asks for.
+    var tree: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(store.visibleRows()) { row in
+                    SidebarRow(row: row, mark: $dropMark)
+                }
+
+                // The space under the last row takes a drop too, so a node can
+                // be moved out of every folder and back to the top level.
+                Color.clear
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .contentShape(Rectangle())
+                    .onDrop(
+                        of: [.termoraNode],
+                        delegate: TopLevelDropDelegate(
+                            store: store,
+                            isTargeted: $isTopLevelTarget,
+                            mark: $dropMark
+                        )
+                    )
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .strokeBorder(isTopLevelTarget ? Color.accentColor : .clear)
+                            .padding(.horizontal, 2)
+                    )
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// The filter over the bookmark tree.
+///
+/// It does what the system search field did: a clear button while it holds
+/// text, and Escape empties it.
+private struct FilterField: View {
+    @Binding var text: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Filter", text: $text)
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+                .onExitCommand { text = "" }
+                .accessibilityIdentifier("sidebar-filter")
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear the filter")
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .glassEffect(.regular, in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture { isFocused = true }
+    }
+}
+
+/// Opens a shell on this Mac, in a new tab.
+///
+/// A row of its own above the filter, with a divider under it: it is not a
+/// bookmark, so one click opens it, and there is nothing to select or edit.
+private struct LocalShellButton: View {
+    @EnvironmentObject private var sessions: SessionsController
+    @State private var isHovering = false
+
+    var body: some View {
+        Button { sessions.openLocal() } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "laptopcomputer")
+                    .foregroundStyle(.tint)
+                    .frame(width: 18)
+                Text("Local Shell")
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text("⇧⌘T")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isHovering ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help("Open a shell on this Mac in a new tab")
+        .accessibilityIdentifier("local-shell")
+    }
+}
+
 /// One row of the sidebar.
 ///
 /// The tree is drawn flat, with the depth as leading space. A nested
@@ -110,6 +201,7 @@ private struct SidebarRow: View {
     @EnvironmentObject private var sessions: SessionsController
     let row: DocumentStore.Row
     @Binding var mark: SidebarDropMark?
+    @State private var isHovering = false
 
     /// How much a level of the tree moves a row to the right.
     private static let indent: CGFloat = 14
@@ -117,6 +209,12 @@ private struct SidebarRow: View {
     private static let height: CGFloat = 24
 
     private var isSelected: Bool { store.selection == row.id }
+
+    private var rowFill: AnyShapeStyle {
+        if isSelected { return AnyShapeStyle(Color.accentColor) }
+        if isHovering { return AnyShapeStyle(.quaternary) }
+        return AnyShapeStyle(Color.clear)
+    }
 
     /// Where the mark sits for this row, if a drag is over it.
     ///
@@ -136,8 +234,11 @@ private struct SidebarRow: View {
         .padding(.horizontal, 4)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(isSelected ? Color.accentColor : Color.clear)
+                .fill(rowFill)
         )
+        // The row under the pointer is marked, the same way as the local
+        // shell row, so it is clear what a click will hit.
+        .onHover { isHovering = $0 }
         .foregroundStyle(isSelected ? Color.white : Color.primary)
         .overlay(alignment: .top) { if placement == .before { insertionLine } }
         .overlay(alignment: .bottom) { if placement == .after { insertionLine } }

@@ -235,6 +235,18 @@ struct TermoraApp: App {
             }
 
             CommandMenu("Session") {
+                // ⌘T works as it does in Ghostty: a new tab like the one in
+                // front. On a connection tab that is the same connection; on
+                // a local tab, or with no tab, it is a local shell.
+                Button("New Tab") { sessions.newTab() }
+                    .keyboardShortcut("t", modifiers: [.command])
+                    .disabled(!store.isUnlocked)
+                Button("New Local Tab") { sessions.openLocal() }
+                    .keyboardShortcut("t", modifiers: [.command, .shift])
+                    .disabled(!store.isUnlocked)
+
+                Divider()
+
                 Button("Connect") {
                     if let connection = store.selectedConnection {
                         sessions.open(connection: connection)
@@ -264,7 +276,7 @@ struct TermoraApp: App {
                 // reads as "go to that tab", not as a riddle.
                 Menu("Go to Tab") {
                     ForEach(Array(sessions.tabs.prefix(9).enumerated()), id: \.element.id) { at, tab in
-                        Button(tab.connectionName) { sessions.selectTab(at: at) }
+                        Button(tab.title) { sessions.selectTab(at: at) }
                             .keyboardShortcut(
                                 KeyEquivalent(Character("\(at + 1)")),
                                 modifiers: [.command]
