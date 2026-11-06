@@ -271,6 +271,12 @@ struct TermoraApp: App {
 
                 Divider()
 
+                Button("Reconnect") { sessions.reconnectSelectedTab() }
+                    .keyboardShortcut("r", modifiers: [.command])
+                    .disabled(!(sessions.selectedTab.map(sessions.canReconnect) ?? false))
+
+                Divider()
+
                 Button("Split Right") { sessions.splitFocusedPane(axis: .horizontal) }
                     .keyboardShortcut("d", modifiers: [.command])
                 Button("Split Down") { sessions.splitFocusedPane(axis: .vertical) }

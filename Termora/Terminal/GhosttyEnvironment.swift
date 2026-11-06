@@ -121,6 +121,7 @@ enum GhosttyEnvironment {
             "super+shift+t",  // Session, New Local Tab
             "super+o",        // Session, Open Connection…
             "super+enter",    // Session, Connect
+            "super+r",        // Session, Reconnect
             "super+shift+f",  // Session, Browse Files
             "super+n",        // File, New Connection
             "super+shift+w",  // File, Close Window

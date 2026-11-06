@@ -39,6 +39,12 @@ public final class SSHConnection: ObservableObject, Identifiable {
     /// Everything the master wrote to standard error, for the details sheet.
     @Published public private(set) var log: String = ""
 
+    /// Called when the master stops while connected, and Termora did not
+    /// stop it: the server went away, the network dropped, or keep-alive
+    /// gave up. The text says why. Every pane and channel on the master has
+    /// stopped with it.
+    public var onLost: ((String) -> Void)?
+
     private var master: Process?
     private let environment: [String: String]
     /// Collects standard error as it arrives, without hopping between threads.
@@ -142,6 +148,9 @@ public final class SSHConnection: ObservableObject, Identifiable {
     private func masterDidExit(status: Int32, output: String) {
         master = nil
         log = output
+        // The tunnels lived in the master, so none is open now.
+        activeForwards.removeAll()
+        let wasConnected = state == .connected
 
         switch state {
         case .connected, .connecting:
@@ -160,6 +169,9 @@ public final class SSHConnection: ObservableObject, Identifiable {
         // OpenSSH writes progress notes even when nothing went wrong.
         let result = CommandResult(status: status, output: "", errorOutput: output)
         state = result.isQuiet ? .disconnected : .failed(result.summary)
+        if wasConnected {
+            onLost?(result.isQuiet ? "The server closed the connection." : result.summary)
+        }
     }
 
     // MARK: - Using the connection

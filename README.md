@@ -101,6 +101,7 @@ drag **Termora** into **Applications**.
 | ⌘W / ⇧⌘W | Close the tab / close the window |
 | ⌘O | Open a connection: find a bookmark, or type `user@host` |
 | ⌘↩ | Connect to the selected bookmark |
+| ⌘R | Reconnect a tab whose connection closed |
 | ⇧⌘F | Browse the files of the selected bookmark |
 | ⌘N / ⇧⌘N | New connection / new folder |
 | ⌃⌘L | Lock the document |
@@ -142,6 +143,21 @@ asks for it each time. If you type no port, OpenSSH takes the port from
 `~/.ssh/config`. To keep the server, right-click its tab and select
 **Save as Bookmark**. The bookmark goes to the top level of the tree, and its
 editor opens.
+
+### When a connection closes
+
+If the server goes away or the network drops, every tab on that connection
+keeps its panes, so you can still read the last output. A bar over the tab
+says why the connection closed. Select **Reconnect**, or press ⌘R, to open
+the connection again. All tabs on that connection come back together, and
+each split keeps its shape. A new pane starts with an empty screen.
+
+Reconnect runs the command before connecting again, opens the tunnels again,
+and types the text after connecting into each tab. If a connection could not
+open at all, its tab offers **Try Again**, which ⌘R also does.
+
+Termora finds a dead network through keep-alive. With keep-alive at 0, a
+dropped connection can stay open for minutes before Termora sees it.
 
 ### Tabs, splits and local shells
 

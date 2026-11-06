@@ -112,7 +112,7 @@ final class AgentGateway: ObservableObject {
                     + "Use the full name that `termora list` prints."
             )
         }
-        switch await sessions.agentConnect(connection: connection) {
+        switch await sessions.establish(connection) {
         case let .success(sshConnection):
             return AgentReply(ok: true, argv: sshConnection.commandArguments(words))
         case let .failure(reason):

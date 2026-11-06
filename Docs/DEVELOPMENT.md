@@ -128,6 +128,27 @@ keep the connection and its tunnels alive. A second tab on a live master
 does not run the command before connecting again and does not open the
 tunnels again.
 
+### When the master stops
+
+`SSHConnection.onLost` fires when the master exits while it was connected
+and Termora did not close it. The panes and channels on the master stop with
+it. `SessionsController` sets `lostReason` on every tab of that connection;
+the phase stays `ready`, so the panes stay in the view tree, and the bar is an
+overlay. Ghostty asks to close a finished pane on any key press, and the
+controller ignores that request while `lostReason` is set.
+
+Reconnect drops the dead master, opens a new one with `establish`, and puts a
+new session in the place of each pane with `PaneNode.replacePanes`. Each new
+pane gets its own `TerminalSurfaceView` (`.id(session.id)`), because a
+surface cannot take a second session. A new tab may already have opened a
+live master (⌘T on a lost tab); Reconnect then uses it.
+
+The package test drops the connection from the server side.
+`TestSSHServer.dropConnections()` kills the whole process tree under the
+listener: killing only `sshd-session [postauth]` moves its worker to
+launchd, and the connection lives on. `ReconnectTests` in the UI tests drops
+it from inside the remote shell.
+
 ### The terminal the server sees
 
 Ghostty calls itself `xterm-ghostty`. OpenSSH copies `TERM` into the request
@@ -333,6 +354,15 @@ log as one line. Use `split(whereSeparator: \.isNewline)`. See
 straight to a `Binding` setter, as in `set: change`. Write the closure out:
 `set: { newValue in change(to: newValue) }`. See `AuthenticationEditor` in
 `Termora/UI/InspectorView.swift`.
+
+**XCUITest finds no hit point inside the tab strip in the title bar.**
+`click()` on a tab fails with "Unable to find hit point for ScrollView".
+Click the tab name by its coordinates:
+`element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()`.
+
+**XCUITest `typeText` can drop characters that need Shift**, such as `:`,
+with some keyboard layouts. Put such text in the fixture, for example as the
+text after connecting, which Termora pastes.
 
 **In a UI test, an identifier query can count more than one element per
 view.** Compare a count with the count before the action, not with a fixed

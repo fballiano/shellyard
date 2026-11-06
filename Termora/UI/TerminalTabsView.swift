@@ -216,7 +216,9 @@ private struct TabButton: View {
 
     /// The dot says status and nothing else: orange, green, or red.
     private var statusColor: Color {
-        switch tab.phase {
+        if tab.isReconnecting { return .orange }
+        if tab.lostReason != nil { return .red }
+        return switch tab.phase {
         case .connecting, .running: .orange
         case .ready: .green
         case .failed: .red
@@ -309,7 +311,12 @@ private struct TabContent: View {
                     .textSelection(.enabled)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 460)
-                Button("Close this tab") { sessions.closeTab(tab.id) }
+                HStack {
+                    Button("Close Tab") { sessions.closeTab(tab.id) }
+                    Button("Try Again") { sessions.reconnect(tab) }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!sessions.canReconnect(tab))
+                }
                 if !tab.commandLog.isEmpty {
                     CommandLog(text: tab.commandLog)
                         .frame(maxWidth: 640)
@@ -319,14 +326,67 @@ private struct TabContent: View {
             .padding()
 
         case .ready:
-            if tab.kind == .files {
-                if let browser = tab.browser {
-                    FileBrowserView(model: browser)
+            // The bar is an overlay, so a lost connection never changes the
+            // view tree: the panes stay, with their last output.
+            Group {
+                if tab.kind == .files {
+                    if let browser = tab.browser {
+                        // A reconnect brings a new model. The identity makes
+                        // the view load it, as its `.task` runs once per view.
+                        FileBrowserView(model: browser)
+                            .id(ObjectIdentifier(browser))
+                    }
+                } else if let root = tab.root {
+                    PaneTreeView(node: root, tab: tab)
                 }
-            } else if let root = tab.root {
-                PaneTreeView(node: root, tab: tab)
+            }
+            .overlay(alignment: .top) {
+                if let reason = tab.lostReason {
+                    LostConnectionBar(tab: tab, reason: reason)
+                }
             }
         }
+    }
+}
+
+/// The bar over a tab whose connection stopped by itself.
+private struct LostConnectionBar: View {
+    @ObservedObject var tab: TerminalTab
+    let reason: String
+    @EnvironmentObject private var sessions: SessionsController
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if tab.isReconnecting {
+                ProgressView().controlSize(.small)
+                Text("Reconnecting to \(tab.name)…")
+                Spacer()
+            } else {
+                Image(systemName: "bolt.horizontal.circle")
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("The connection to \(tab.name) closed.")
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                }
+                Spacer()
+                Button("Close Tab") { sessions.closeTab(tab.id) }
+                Button("Reconnect") { sessions.reconnect(tab) }
+                    .buttonStyle(.borderedProminent)
+                    .help("Reconnect (⌘R)")
+                    .accessibilityIdentifier("reconnect-button")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
+        .padding(10)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("lost-connection-bar")
     }
 }
 
@@ -338,7 +398,11 @@ private struct PaneTreeView: View {
     var body: some View {
         switch node.content {
         case let .pane(session):
+            // A reconnect puts a new session in the same node. The identity
+            // makes a new surface view for it: a surface view cannot take a
+            // second session.
             TerminalPaneView(session: session, tab: tab)
+                .id(session.id)
         case let .split(axis, first, second):
             SplitContainer(axis: axis, ratio: $node.ratio) {
                 PaneTreeView(node: first, tab: tab)

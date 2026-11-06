@@ -43,6 +43,13 @@ final class TerminalTab: Identifiable, ObservableObject {
     @Published var phase: Phase = .connecting
     @Published var root: PaneNode?
     @Published var focusedPaneID: UUID?
+    /// Why the connection under a ready tab stopped, or `nil` while it runs.
+    ///
+    /// The phase stays `ready`, so the panes stay in the view tree and you
+    /// can still read their last output. A bar over them offers Reconnect.
+    @Published var lostReason: String?
+    /// Reconnect or Try Again is at work.
+    @Published var isReconnecting = false
 
     init(connectionID: UUID, connectionName: String, colorTag: ColorTag) {
         self.connectionID = connectionID
@@ -105,6 +112,23 @@ final class TerminalTab: Identifiable, ObservableObject {
             root.split(paneID: target, axis: axis, with: session)
         }
         focusedPaneID = session.id
+    }
+
+    /// Puts a new session in the place of every pane, so the splits keep
+    /// their shape. The focus moves to the session that replaces the
+    /// focused pane.
+    ///
+    /// A surface cannot start a second process, so each pane needs a new
+    /// session, and the old scrollback goes with the old one.
+    func replacePanes(with make: () -> TerminalSession) {
+        guard let root else { return }
+        var replaced: [UUID: UUID] = [:]
+        root.replacePanes { old in
+            let new = make()
+            replaced[old.id] = new.id
+            return new
+        }
+        focusedPaneID = focusedPaneID.flatMap { replaced[$0] } ?? panes.first?.id
     }
 
     /// Closes a pane. Returns true when the tab has no panes left.
@@ -241,10 +265,14 @@ final class SessionsController: ObservableObject {
     func activity(for connectionID: UUID) -> ConnectionActivity {
         var found = ConnectionActivity.none
         for tab in tabs where tab.connectionID == connectionID {
+            if tab.isReconnecting {
+                found = .connecting
+                continue
+            }
             switch tab.phase {
-            case .ready: return .live
+            case .ready where tab.lostReason == nil: return .live
             case .connecting, .running: found = .connecting
-            case .failed: break
+            case .ready, .failed: break
             }
         }
         return found
@@ -297,7 +325,16 @@ final class SessionsController: ObservableObject {
         tab.kind = kind
         tabs.append(tab)
         selectedTabID = tab.id
+        start(tab, on: connection, settings: settings, engine: engine)
+    }
 
+    /// Opens the connection under a tab that has no session yet: a new tab,
+    /// or a tab whose first attempt failed.
+    private func start(
+        _ tab: TerminalTab, on connection: Connection,
+        settings: EffectiveSettings, engine: SSHEngine
+    ) {
+        let kind = tab.kind
         // A second tab on a live master opens no new connection. The command
         // before connecting and the tunnels already ran for the first tab.
         let alreadyOpen = engine.connection(for: connection.id)?.isConnected ?? false
@@ -328,10 +365,7 @@ final class SessionsController: ObservableObject {
                 }
             }
 
-            let target = target(for: connection, settings: settings)
-            let sshConnection = await engine.connect(
-                id: connection.id, name: connection.name, target: target
-            )
+            let sshConnection = await connectMaster(connection, settings: settings, engine: engine)
 
             switch sshConnection.state {
             case .connected:
@@ -345,11 +379,7 @@ final class SessionsController: ObservableObject {
                     updateVisibility()
                     await typeAfterConnect(settings.afterConnectText, into: session)
                 case .files:
-                    let browser = FileBrowserModel(sshConnection: sshConnection)
-                    browser.onEdit = { [weak self] entry, application in
-                        self?.remoteEdits.edit(entry, on: sshConnection, with: application)
-                    }
-                    tab.browser = browser
+                    tab.browser = makeBrowser(on: sshConnection)
                     tab.phase = .ready
                     tabPhaseChanged()
                 }
@@ -373,6 +403,123 @@ final class SessionsController: ObservableObject {
             connection.port
         }
         return SSHTarget(host: connection.host, port: port, settings: settings)
+    }
+
+    /// Starts the control master, or returns the live one, and listens for
+    /// its loss. Every path that opens a master comes through here.
+    private func connectMaster(
+        _ connection: Connection, settings: EffectiveSettings, engine: SSHEngine
+    ) async -> SSHConnection {
+        let sshConnection = await engine.connect(
+            id: connection.id, name: connection.name,
+            target: target(for: connection, settings: settings)
+        )
+        let connectionID = connection.id
+        sshConnection.onLost = { [weak self] reason in
+            self?.connectionLost(connectionID, reason: reason)
+        }
+        return sshConnection
+    }
+
+    private func makeBrowser(on sshConnection: SSHConnection) -> FileBrowserModel {
+        let browser = FileBrowserModel(sshConnection: sshConnection)
+        browser.onEdit = { [weak self] entry, application in
+            self?.remoteEdits.edit(entry, on: sshConnection, with: application)
+        }
+        return browser
+    }
+
+    // MARK: - A lost connection
+
+    /// The master stopped by itself. Every tab on it keeps its panes, so the
+    /// last output can still be read, and shows a bar with Reconnect.
+    ///
+    /// An edit in progress ends: its save could never be copied back.
+    private func connectionLost(_ connectionID: UUID, reason: String) {
+        remoteEdits.connectionClosed(connectionID)
+        for tab in tabs where tab.connectionID == connectionID && tab.phase == .ready {
+            tab.lostReason = reason
+        }
+        tabPhaseChanged()
+    }
+
+    /// True when the tab can connect again: its connection was lost, or its
+    /// first attempt failed.
+    func canReconnect(_ tab: TerminalTab) -> Bool {
+        guard !tab.isLocal, !tab.isReconnecting, connection(of: tab) != nil else { return false }
+        if tab.lostReason != nil { return true }
+        if case .failed = tab.phase { return true }
+        return false
+    }
+
+    /// The Reconnect command (⌘R), for the tab in front.
+    func reconnectSelectedTab() {
+        guard let tab = selectedTab else { return }
+        reconnect(tab)
+    }
+
+    /// Connects a tab again, after a loss or after a failed first attempt.
+    func reconnect(_ tab: TerminalTab) {
+        guard canReconnect(tab), let connection = connection(of: tab), let engine else { return }
+
+        if case .failed = tab.phase {
+            // Nothing was ever open in this tab: try the first attempt again.
+            tab.phase = .connecting
+            tab.commandLog = ""
+            tabPhaseChanged()
+            let settings = store.index.effectiveSettings(
+                for: connection, fallback: AppSettings.connectionFallback
+            )
+            start(tab, on: connection, settings: settings, engine: engine)
+            return
+        }
+
+        // Every tab on the lost master comes back on one new master.
+        let affected = tabs.filter { $0.connectionID == connection.id && $0.lostReason != nil }
+        for each in affected { each.isReconnecting = true }
+        tabPhaseChanged()
+
+        Task {
+            // A new tab may already have opened a live master (⌘T on a lost
+            // tab). Use it. Otherwise drop the dead master and its askpass
+            // token first, or the engine would hand the dead one back.
+            let current = engine.connection(for: connection.id)
+            if current?.isConnected != true, current?.state != .connecting {
+                await engine.disconnect(id: connection.id)
+            }
+            let outcome = await establish(connection)
+            for each in affected { each.isReconnecting = false }
+
+            switch outcome {
+            case let .failure(reason):
+                for each in affected { each.lostReason = reason }
+            case let .success(sshConnection):
+                let settings = store.index.effectiveSettings(
+                    for: connection, fallback: AppSettings.connectionFallback
+                )
+                let open = affected.filter { each in tabs.contains { $0 === each } }
+                for each in open {
+                    switch each.kind {
+                    case .terminal:
+                        each.replacePanes { makeSession(on: sshConnection, title: each.name) }
+                        if let pane = each.focusedPane {
+                            Task { await typeAfterConnect(settings.afterConnectText, into: pane) }
+                        }
+                    case .files:
+                        each.browser?.close()
+                        each.browser = makeBrowser(on: sshConnection)
+                    }
+                    each.lostReason = nil
+                }
+                // Every tab closed while the master was opening.
+                if !tabs.contains(where: { $0.connectionID == connection.id }) {
+                    await engine.disconnect(id: connection.id)
+                }
+                updateVisibility()
+                selectedTab?.focusedPane?.focus()
+            }
+            tabPhaseChanged()
+        }
     }
 
     // MARK: - Quick connections
@@ -469,17 +616,17 @@ final class SessionsController: ObservableObject {
         return engineStorage.connections.values.sorted { $0.name < $1.name }
     }
 
-    /// What `agentConnect` produced. A refusal carries the words the tool
+    /// What `establish` produced. A refusal carries the words the tool
     /// prints on standard error.
     enum AgentConnectOutcome {
         case success(SSHConnection)
         case failure(String)
     }
 
-    /// Opens or reuses the control master for the `termora` tool, without a
-    /// tab. When OpenSSH must ask, the askpass sheet appears here in the
-    /// application, and the tool waits.
-    func agentConnect(connection: Connection) async -> AgentConnectOutcome {
+    /// Opens or reuses the control master without a tab, for the `termora`
+    /// tool and for Reconnect. When OpenSSH must ask, the askpass sheet
+    /// appears here in the application, and the tool waits.
+    func establish(_ connection: Connection) async -> AgentConnectOutcome {
         guard let engine else {
             return .failure(engineError ?? "The SSH engine did not start.")
         }
@@ -510,10 +657,7 @@ final class SessionsController: ObservableObject {
             }
         }
 
-        let target = target(for: connection, settings: settings)
-        let sshConnection = await engine.connect(
-            id: connection.id, name: connection.name, target: target
-        )
+        let sshConnection = await connectMaster(connection, settings: settings, engine: engine)
         switch sshConnection.state {
         case .connected:
             if !alreadyOpen { await startForwards(of: connection, on: sshConnection) }
@@ -627,12 +771,15 @@ final class SessionsController: ObservableObject {
 
     private func wire(_ session: TerminalSession) -> TerminalSession {
         session.onRequestClose = { [weak self] session, processAlive in
+            guard let self else { return }
             // A pane whose program still runs is not closed on the spot: the
-            // view asks first. A finished pane goes at once.
+            // view asks first. A finished pane goes at once, except on a lost
+            // connection: Ghostty asks to close on any key there, and the
+            // pane must stay under the bar until you choose Reconnect.
             if processAlive {
-                self?.paneCloseRequest = PaneCloseRequest(paneID: session.id)
-            } else {
-                self?.close(paneID: session.id)
+                paneCloseRequest = PaneCloseRequest(paneID: session.id)
+            } else if tab(containing: session.id)?.lostReason == nil {
+                close(paneID: session.id)
             }
         }
         return session
@@ -654,8 +801,12 @@ final class SessionsController: ObservableObject {
         updateVisibility()
     }
 
+    private func tab(containing paneID: UUID) -> TerminalTab? {
+        tabs.first { $0.panes.contains { $0.id == paneID } }
+    }
+
     func close(paneID: UUID) {
-        guard let tab = tabs.first(where: { $0.panes.contains { $0.id == paneID } }) else { return }
+        guard let tab = tab(containing: paneID) else { return }
         if tab.close(paneID: paneID) {
             closeTab(tab.id)
         }

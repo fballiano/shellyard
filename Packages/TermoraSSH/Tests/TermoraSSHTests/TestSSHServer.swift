@@ -20,6 +20,39 @@ final class TestSSHServer: @unchecked Sendable {
 
     private var process: Process?
 
+    /// Ends every connection to the server, as a server that goes away
+    /// does, and keeps the server itself running.
+    ///
+    /// Each connection is two processes: `sshd-session [postauth]` under
+    /// the listener, and the worker under it that holds the socket. Killing
+    /// only the first moves the worker to launchd, and the connection lives
+    /// on, so the whole tree goes.
+    func dropConnections() {
+        guard let pid = process?.processIdentifier else { return }
+        var doomed: [Int32] = []
+        var parents = [pid]
+        while let parent = parents.popLast() {
+            let children = Self.children(of: parent)
+            doomed += children
+            parents += children
+        }
+        for child in doomed { kill(child, SIGKILL) }
+    }
+
+    private static func children(of pid: Int32) -> [Int32] {
+        let pgrep = Process()
+        pgrep.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        pgrep.arguments = ["-P", String(pid)]
+        let output = Pipe()
+        pgrep.standardOutput = output
+        guard (try? pgrep.run()) != nil else { return [] }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        pgrep.waitUntilExit()
+        return String(decoding: data, as: UTF8.self)
+            .split(whereSeparator: \.isNewline)
+            .compactMap { Int32($0) }
+    }
+
     static var isAvailable: Bool {
         FileManager.default.isExecutableFile(atPath: "/usr/sbin/sshd")
     }

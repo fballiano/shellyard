@@ -65,6 +65,42 @@ final class SSHIntegrationTests {
         #expect(connection.state == .disconnected)
     }
 
+    @Test("A master that the server drops reports the loss once, and a new one connects")
+    func droppedMasterReportsLoss() async throws {
+        let id = UUID()
+        let connection = await engine.connect(
+            id: id, name: "test", target: target(keyPath: server.plainKeyPath, passphrase: "")
+        )
+        try #require(connection.state == .connected, "The master must connect. Log: \(connection.log)")
+
+        var reasons: [String] = []
+        connection.onLost = { reasons.append($0) }
+        server.dropConnections()
+
+        let deadline = ContinuousClock.now + .seconds(10)
+        while reasons.isEmpty, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(reasons.count == 1, "The loss must be reported once. Log: \(connection.log)")
+        #expect(!connection.isConnected)
+
+        // A new master replaces the dead one under the same identifier.
+        await engine.disconnect(id: id)
+        let again = await engine.connect(
+            id: id, name: "test", target: target(keyPath: server.plainKeyPath, passphrase: "")
+        )
+        #expect(again.state == .connected, "A new master must connect. Log: \(again.log)")
+        #expect(again !== connection)
+
+        // Termora's own close is not a loss.
+        var closedReasons: [String] = []
+        again.onLost = { closedReasons.append($0) }
+        await engine.disconnect(id: id)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(closedReasons.isEmpty, "A close that Termora asked for is not a loss.")
+        #expect(reasons.count == 1)
+    }
+
     @Test("The terminal description reaches the far host over the master")
     func installsTheTerminalDescription() async throws {
         try #require(FileManager.default.isExecutableFile(atPath: "/usr/bin/tic"))

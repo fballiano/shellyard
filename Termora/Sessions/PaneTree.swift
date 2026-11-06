@@ -79,6 +79,18 @@ final class PaneNode: Identifiable, ObservableObject {
         ratio = other.ratio
     }
 
+    /// Puts a new session in the place of every pane below this node. The
+    /// divisions and their ratios stay as they are.
+    func replacePanes(with make: (TerminalSession) -> TerminalSession) {
+        switch content {
+        case let .pane(session):
+            content = .pane(make(session))
+        case let .split(_, first, second):
+            first.replacePanes(with: make)
+            second.replacePanes(with: make)
+        }
+    }
+
     /// True when this node is a single pane with that identifier.
     func isPane(_ paneID: UUID) -> Bool {
         if case let .pane(session) = content { return session.id == paneID }
