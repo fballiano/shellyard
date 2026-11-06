@@ -103,9 +103,41 @@ Two suites are opt-in:
 2. Push `main`, then push a tag `v<version>`.
 
 The tag starts `.github/workflows/release.yml`. It builds the Release
-configuration, publishes a GitHub release with the zip, and points
+configuration, signs it with the Developer ID certificate, has Apple notarize
+it, staples the ticket, publishes a GitHub release with the zip, and points
 `Casks/termora.rb` at the new zip with a commit on `main`. Pull that commit
 before your next push.
+
+### Signing and notarization
+
+Local builds stay ad hoc: `project.yml` signs with `-`, so `./run.sh` and the
+tests need no certificate. Only the workflow signs with Developer ID, through
+settings on the `xcodebuild` command line, which reach every target: the app
+and the two tools inside it get the same signature, the hardened runtime, and
+a secure timestamp. `CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO` keeps
+`get-task-allow` out, which notarization refuses.
+
+Before it asks Apple, the workflow checks each executable for the team, the
+hardened runtime, the timestamp, and no `get-task-allow`, and it starts both
+tools once: a restricted entitlement with no provisioning profile gets a
+program killed at launch, and nobody would see it in a tool.
+
+The workflow needs one repository variable and five secrets. Run
+`Scripts/setup-signing.sh`: it walks you through the certificate, the
+App Store Connect API key, and `gh`, and it writes nothing to disk.
+
+| Name | Kind | What it is |
+| --- | --- | --- |
+| `APPLE_TEAM_ID` | variable | The Team ID, `H95XQBELRP` |
+| `DEVELOPER_ID_P12_BASE64` | secret | The Developer ID Application certificate with its key |
+| `DEVELOPER_ID_P12_PASSWORD` | secret | The password of that `.p12` |
+| `NOTARY_KEY_P8_BASE64` | secret | An App Store Connect API key (Developer role) |
+| `NOTARY_KEY_ID` | secret | The ID of that key |
+| `NOTARY_ISSUER_ID` | secret | Its issuer ID |
+
+**Actions → Release → Run workflow** is a dry run: it signs and notarizes,
+keeps the zip as an artifact, and publishes nothing. Run it after a change to
+the signing.
 
 ## How a connection works
 

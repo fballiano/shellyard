@@ -1,6 +1,7 @@
 name: Release
 
-# A tag `v*` builds the application, publishes a GitHub release with the
+# A tag `v*` builds the application, signs it with the Developer ID
+# certificate, has Apple notarize it, publishes a GitHub release with the
 # zip, and points the Homebrew cask in Casks/termora.rb at it. The repo is
 # its own tap:
 #
@@ -10,10 +11,28 @@ name: Release
 #
 # Always use the full name: the main cask repository has a different
 # application that is also called "termora".
+#
+# Run it by hand (Actions -> Release -> Run workflow) for a dry run: it
+# signs and notarizes, keeps the zip as a workflow artifact, and publishes
+# nothing.
+#
+# What it needs, set once in the repository settings (see
+# Scripts/setup-signing.sh):
+#
+#   variable  APPLE_TEAM_ID                the ten-character Team ID
+#   secret    DEVELOPER_ID_P12_BASE64      the Developer ID Application
+#                                          certificate and its key, .p12,
+#                                          in base64
+#   secret    DEVELOPER_ID_P12_PASSWORD    the password of that .p12
+#   secret    NOTARY_KEY_P8_BASE64         an App Store Connect API key,
+#                                          .p8, in base64
+#   secret    NOTARY_KEY_ID                the ID of that key
+#   secret    NOTARY_ISSUER_ID             the issuer ID of that key
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,6 +40,9 @@ permissions:
 jobs:
   release:
     runs-on: macos-26
+    env:
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APP: build/Build/Products/Release/Termora.app
     steps:
       - uses: actions/checkout@v7
 
@@ -33,25 +55,146 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Build
+      # A keychain of its own, for this run only. The certificate never
+      # touches the disk outside the runner's temporary folder.
+      - name: Import the Developer ID certificate
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          if [ -z "$TEAM_ID" ] || [ -z "$P12_BASE64" ]; then
+            echo "::error::APPLE_TEAM_ID or DEVELOPER_ID_P12_BASE64 is not set. See Scripts/setup-signing.sh."
+            exit 1
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$KEYCHAIN" \
+            -P "$P12_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          # The current list, word by word: the paths hold no spaces.
+          read -r -a existing <<< "$(security list-keychains -d user | tr -d '"' | xargs)"
+          security list-keychains -d user -s "$KEYCHAIN" "${existing[@]}"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      # The settings on the command line apply to every target, so the two
+      # tools inside the bundle get the same signature, the hardened
+      # runtime, and a secure timestamp. Notarization refuses an executable
+      # without any one of them. Xcode must not inject its base
+      # entitlements: with them comes get-task-allow, which notarization
+      # also refuses. project.yml keeps ad-hoc signing for local builds.
+      - name: Build and sign
         run: |
           xcodegen generate
           xcodebuild -project Termora.xcodeproj -scheme Termora \
                      -configuration Release \
                      -destination 'platform=macOS,arch=arm64' \
-                     -derivedDataPath build build
+                     -derivedDataPath build \
+                     CODE_SIGN_STYLE=Manual \
+                     CODE_SIGN_IDENTITY="Developer ID Application" \
+                     DEVELOPMENT_TEAM="$TEAM_ID" \
+                     OTHER_CODE_SIGN_FLAGS="--timestamp --keychain $KEYCHAIN" \
+                     ENABLE_HARDENED_RUNTIME=YES \
+                     CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+                     build
+
+      - name: Check the signature
+        run: |
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          for binary in "$APP"/Contents/MacOS/*; do
+            echo "== $binary"
+            details="$(codesign -dvv "$binary" 2>&1)"
+            echo "$details" | grep -E "Authority=Developer ID Application|TeamIdentifier|flags|Timestamp"
+            echo "$details" | grep -q "TeamIdentifier=$TEAM_ID" \
+              || { echo "::error::$binary is not signed by team $TEAM_ID"; exit 1; }
+            echo "$details" | grep -q "(runtime)" \
+              || { echo "::error::$binary has no hardened runtime"; exit 1; }
+            echo "$details" | grep -q "^Timestamp=" \
+              || { echo "::error::$binary has no secure timestamp"; exit 1; }
+            if grep -q "get-task-allow" \
+                 <<< "$(codesign -d --entitlements :- "$binary" 2>/dev/null)"; then
+              echo "::error::$binary carries get-task-allow"; exit 1
+            fi
+          done
+
+      # A restricted entitlement with no provisioning profile gets a program
+      # killed at launch (exit 137), and the tools are only ever run by
+      # other programs, so nobody would see it. Start both here.
+      - name: Start the tools
+        run: |
+          "$APP/Contents/MacOS/termora-cli" --help > /dev/null
+          set +e
+          "$APP/Contents/MacOS/termora-askpass" probe < /dev/null
+          STATUS=$?
+          set -e
+          # With no socket to ask, the helper exits 1. 128 and up is a signal.
+          if [ $STATUS -ge 128 ]; then
+            echo "::error::termora-askpass was killed at launch (exit $STATUS)"
+            exit 1
+          fi
+
+      # notarytool waits for Apple's answer. On a refusal, it prints the
+      # log, which names every file and the reason.
+      - name: Notarize
+        env:
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          KEY="$RUNNER_TEMP/notary-key.p8"
+          echo "$NOTARY_KEY_P8_BASE64" | base64 --decode > "$KEY"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/notarize.zip"
+          set +e
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --key "$KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" \
+            --wait --timeout 45m --output-format json > "$RUNNER_TEMP/notary.json"
+          STATUS=$?
+          set -e
+          cat "$RUNNER_TEMP/notary.json"
+          ID="$(plutil -extract id raw "$RUNNER_TEMP/notary.json" 2>/dev/null || true)"
+          RESULT="$(plutil -extract status raw "$RUNNER_TEMP/notary.json" 2>/dev/null || true)"
+          if [ $STATUS -ne 0 ] || [ "$RESULT" != "Accepted" ]; then
+            if [ -n "$ID" ]; then
+              xcrun notarytool log "$ID" \
+                --key "$KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID"
+            fi
+            rm -f "$KEY"
+            echo "::error::Notarization did not succeed: ${RESULT:-no answer}"
+            exit 1
+          fi
+          rm -f "$KEY"
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute --verbose=4 "$APP"
 
       - name: Package
         id: package
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ditto -c -k --sequesterRsrc --keepParent \
-                build/Build/Products/Release/Termora.app "Termora-$VERSION.zip"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dry-run-$(git rev-parse --short HEAD)"
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "Termora-$VERSION.zip"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "sha256=$(shasum -a 256 "Termora-$VERSION.zip" | cut -d' ' -f1)" \
             >> "$GITHUB_OUTPUT"
 
+      - name: Keep the dry-run zip
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termora-${{ steps.package.outputs.version }}
+          path: Termora-${{ steps.package.outputs.version }}.zip
+
       - name: Create the release
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -61,6 +204,7 @@ jobs:
             --generate-notes
 
       - name: Point the cask at the release
+        if: github.event_name == 'push'
         run: |
           git fetch origin main
           git checkout main
@@ -74,3 +218,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "Point the Homebrew cask at $VERSION"
           git push origin main
+
+      - name: Remove the signing keychain
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN:-}" ]; then
+            security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+          fi
