@@ -51,6 +51,16 @@ final class TerminalSession: Identifiable, ObservableObject {
     /// The child process has exited.
     @Published private(set) var isFinished = false
 
+    /// The one platform view of this pane, made the first time it is drawn.
+    ///
+    /// The Ghostty surface, and with it the process, belongs to this view. A
+    /// split moves a pane to a new place in the SwiftUI tree, and closing one
+    /// of two panes moves the other one up; SwiftUI then makes a new view
+    /// there. A new view would start a new surface and a new process, and
+    /// the old view would take the program you were running with it. Giving
+    /// SwiftUI this view again moves it, surface and all.
+    private var platformView: TerminalView?
+
     /// The owner sets this to remove the pane. The flag reports whether the
     /// child process was still running, so the owner can ask for confirmation.
     var onRequestClose: ((TerminalSession, _ processAlive: Bool) -> Void)?
@@ -67,6 +77,12 @@ final class TerminalSession: Identifiable, ObservableObject {
             waitAfterCommand: launch.waitAfterCommand,
             context: .window
         )
+        state.makePlatformView = { [weak self] in
+            if let view = self?.platformView { return view }
+            let view = TerminalView(frame: .zero)
+            self?.platformView = view
+            return view
+        }
         state.onClose = { [weak self] processAlive in
             MainActor.assumeIsolated {
                 self?.handleClose(processAlive: processAlive)

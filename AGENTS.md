@@ -84,8 +84,8 @@ packages in `Packages/`:
   vendored fork with three fixes; all three are upstream since 1.4.5, so
   the copy is gone. Before pinning a newer version, check that the wakeup
   observers (`addWakeupObserver`), `TerminalViewState.isSurfaceVisible`,
-  and `TerminalViewState.sendKey(_:)` are still there — each guards against
-  a bug Termora hit.
+  `TerminalViewState.sendKey(_:)`, and `TerminalViewState.makePlatformView`
+  are still there — each guards against a bug Termora hit.
 
 In the app target, `Termora/Terminal/` is the only code that calls
 libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits
@@ -100,6 +100,10 @@ libghostty. `Termora/Sessions/SessionsController.swift` owns tabs/splits
   — the tab goes permanently blank. Use
   `SessionsController.updateVisibility()` / `isSurfaceVisible` to stop
   drawing instead.
+- **Each pane keeps its one `TerminalView`** (`TerminalSession`, through
+  `TerminalViewState.makePlatformView`). The surface and its process belong
+  to the platform view. Without this, a split, or closing one of two panes,
+  makes a new view, and the program in the moved pane ends.
 - **Do not use `.searchable` in the sidebar.** With `placement: .sidebar`
   the system draws its field above all other sidebar content, so nothing can
   sit above the filter. `SidebarView` has its own `FilterField` for this.

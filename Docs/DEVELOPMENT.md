@@ -375,6 +375,14 @@ straight to a `Binding` setter, as in `set: change`. Write the closure out:
 `set: { newValue in change(to: newValue) }`. See `AuthenticationEditor` in
 `Termora/UI/InspectorView.swift`.
 
+**Each pane keeps its one `TerminalView`.** The Ghostty surface, and so the
+process, belongs to the platform view. A split moves a pane to a new place
+in the SwiftUI tree, and closing one of two panes moves the other one up;
+SwiftUI then makes a new view there, which started a new shell and ended
+the program in the pane. `TerminalSession` gives SwiftUI the same view again
+through `TerminalViewState.makePlatformView`, so the view moves with its
+surface. `LocalTabTests.testSplitKeepsTheRunningProgram` guards it.
+
 **XCUITest finds no hit point inside the tab strip in the title bar.**
 `click()` on a tab fails with "Unable to find hit point for ScrollView".
 Click the tab name by its coordinates:

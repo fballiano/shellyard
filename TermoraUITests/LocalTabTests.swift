@@ -108,6 +108,49 @@ final class LocalTabTests: XCTestCase {
                        "A lock must close every session, local shells too.")
     }
 
+    /// A split must not restart the pane it splits, and closing one pane
+    /// must not restart the other.
+    ///
+    /// The surface, and so the process, belongs to the pane's platform view.
+    /// A split moves the pane to a new place in the view tree; a new view
+    /// there once started a new shell and ended the running program. The
+    /// test sees the program through Termora itself: ⌘W on a pane with a
+    /// running program asks first, and a fresh idle shell closes at once.
+    func testSplitKeepsTheRunningProgram() throws {
+        let (app, main) = unlockedWindow()
+
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(localTabs(in: main).firstMatch.waitForExistence(timeout: 5))
+        sleep(3)
+        app.typeText("sleep 120\r")
+        sleep(1)
+
+        app.typeKey("d", modifierFlags: [.command])
+        sleep(2)
+        let question = app.staticTexts["A program still runs in it."]
+
+        // The left pane, which ran the program before the split.
+        main.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)).click()
+        app.typeKey("w", modifierFlags: [.command])
+        XCTAssertTrue(question.waitForExistence(timeout: 5),
+                      "The split restarted the pane: its program is gone.")
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(waitUntil { !question.exists })
+
+        // Close the right pane, an idle shell. The left pane moves up.
+        main.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)).click()
+        app.typeKey("w", modifierFlags: [.command])
+        sleep(2)
+        if question.exists { app.typeKey(.return, modifierFlags: []) }
+        sleep(1)
+
+        main.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        app.typeKey("w", modifierFlags: [.command])
+        XCTAssertTrue(question.waitForExistence(timeout: 5),
+                      "Closing the other pane restarted this one: its program is gone.")
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
     // MARK: - Helpers
 
     private func unlockedWindow() -> (XCUIApplication, XCUIElement) {
