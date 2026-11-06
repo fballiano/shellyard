@@ -229,7 +229,14 @@ has_developer_id() {
 
 run_wizard() {
 
-TOTAL_STAGES=6
+# Every stage waits for Enter. Without a terminal, `read` gets end-of-input
+# at once and a wait loop spins for ever, so stop here instead.
+if [[ ! -t 0 ]]; then
+  echo "Run this in a terminal of its own: cd \"$(pwd)\" && ./Scripts/setup-signing.sh" >&2
+  exit 1
+fi
+
+TOTAL_STAGES=7
 
 banner "Termora: sign and notarize the releases"
 
@@ -250,26 +257,52 @@ note "gh is logged in."
 pause
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
-stage "Developer ID Application certificate"
+stage "Developer ID certificate: the request"
+CERT_READY=0
 if has_developer_id; then
-  note "This Mac already has one:"
+  CERT_READY=1
+  note "This Mac already has the certificate:"
   security find-identity -v -p codesigning | grep "Developer ID Application: .*($TEAM_ID)" | sed 's/^/    /'
-  pause
+  note "The next stage has nothing to do."
 else
-  step "Open Xcode, then Xcode → Settings… (⌘,) → Accounts."
-  step "Select your Apple ID, then the team with ID $TEAM_ID."
-  step "Click Manage Certificates…, then + at the bottom left."
-  step "Choose Developer ID Application, then Done."
-  open -a Xcode >/dev/null 2>&1 || warn "Could not open Xcode. Open it yourself."
-  until has_developer_id; do
-    pause "Press Enter when the certificate exists"
-    has_developer_id || warn "The keychain has no Developer ID Application certificate for $TEAM_ID yet."
-  done
-  note "Found it."
-  pause
+  say "The developer website makes the certificate from a request that your"
+  say "Mac signs. The private key stays in your login keychain."
+  step "Keychain Access opens. Choose Keychain Access → Certificate Assistant →"
+  step "Request a Certificate From a Certificate Authority…"
+  step "User Email Address: your Apple ID. Common Name: Fabrizio Balliano."
+  step "Leave CA Email Address empty. Choose Saved to disk, then Continue."
+  step "Save the .certSigningRequest file on the Desktop."
+  open -a "Keychain Access" >/dev/null 2>&1 \
+    || open "/System/Library/CoreServices/Applications/Keychain Access.app" >/dev/null 2>&1 \
+    || warn "Could not open Keychain Access. Open it with Spotlight."
+  note "Xcode → Settings → Accounts → Manage Certificates can do this too, but"
+  note "only when Xcode is signed in with the Account Holder's Apple ID."
 fi
+pause
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
+stage "Developer ID certificate: the website"
+if (( CERT_READY )); then
+  note "Already done."
+else
+  open_url "https://developer.apple.com/account/resources/certificates/add"
+  step "Sign in with the Account Holder's Apple ID."
+  step "Choose Developer ID Application, then Continue."
+  step "Profile Type: G2 Sub-CA. Upload the .certSigningRequest, then Continue."
+  step "Click Download, then double-click the .cer file to add it to the keychain."
+  note "If the site also says Account Holder only: check your role under"
+  note "Membership details, and accept any new agreement on the account page."
+  until has_developer_id; do
+    pause "Press Enter when the certificate is in the keychain"
+    has_developer_id || warn "The keychain has no Developer ID Application certificate for $TEAM_ID yet."
+  done
+  note "Found it:"
+  security find-identity -v -p codesigning | grep "Developer ID Application: .*($TEAM_ID)" | sed 's/^/    /'
+  note "The .certSigningRequest and the .cer files are no longer needed."
+fi
+pause
+
+# ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Export the certificate as a .p12"
 say "CI needs the certificate with its private key, in one .p12 file."
 step "Keychain Access opens. Select the login keychain, then My Certificates."
@@ -292,7 +325,7 @@ while true; do
 done
 pause
 
-# ── 4 ─────────────────────────────────────────────────────────────────────
+# ── 5 ─────────────────────────────────────────────────────────────────────
 stage "App Store Connect API key, for notarization"
 open_url "https://appstoreconnect.apple.com/access/integrations/api"
 step "Open the Team Keys tab. The first time, request access and accept."
@@ -319,7 +352,7 @@ else
 fi
 pause
 
-# ── 5 ─────────────────────────────────────────────────────────────────────
+# ── 6 ─────────────────────────────────────────────────────────────────────
 stage "GitHub variable and secrets"
 say "These go to $GH_REPO and replace any value already there:"
 note "variable APPLE_TEAM_ID = $TEAM_ID"
@@ -337,7 +370,7 @@ else
 fi
 pause
 
-# ── 6 ─────────────────────────────────────────────────────────────────────
+# ── 7 ─────────────────────────────────────────────────────────────────────
 stage "Dry run, and tidy up"
 say "A dry run builds, signs, and notarizes, and publishes nothing. The zip"
 say "stays on the run as an artifact."
