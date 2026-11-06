@@ -121,13 +121,13 @@ final class TabSwitchDuringConnectTests: XCTestCase {
         let betaTab = main.descendants(matching: .any)
             .matching(identifier: "tab-beta").firstMatch
         XCTAssertTrue(betaTab.waitForExistence(timeout: 5))
-        alphaTab.click()
+        clickTab("alpha", in: main)
 
         // Beta finishes its delay, connects, and prints, all while hidden.
         sleep(12)
 
         // Return to beta. The pane must show the terminal, not an empty area.
-        betaTab.click()
+        clickTab("beta", in: main)
         sleep(2)
         XCTAssertTrue(paneHasContent(in: main),
                       "The tab that connected while hidden must draw its terminal.")
@@ -182,5 +182,13 @@ final class TabSwitchDuringConnectTests: XCTestCase {
             dark += 1
         }
         return dark
+    }
+
+    /// Clicks the name on a tab. XCUITest finds no hit point inside the tab
+    /// strip in the title bar, so the click goes by coordinates.
+    private func clickTab(_ name: String, in main: XCUIElement) {
+        main.staticTexts.matching(identifier: "tab-\(name)").firstMatch
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .click()
     }
 }
