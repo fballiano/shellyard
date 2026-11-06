@@ -389,6 +389,11 @@ the program in the pane. `TerminalSession` gives SwiftUI the same view again
 through `TerminalViewState.makePlatformView`, so the view moves with its
 surface. `LocalTabTests.testSplitKeepsTheRunningProgram` guards it.
 
+**After connecting waits for the window title.** libghostty reports no
+output, but it reports the title, and most shells set it as they draw the
+prompt. fish drops input that arrives while it starts, so a fixed wait was
+too short. See `TerminalSession.waitForPrompt()`.
+
 **XCUITest finds no hit point inside the tab strip in the title bar.**
 `click()` on a tab fails with "Unable to find hit point for ScrollView".
 Click the tab name by its coordinates:

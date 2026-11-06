@@ -694,18 +694,14 @@ final class SessionsController: ObservableObject {
         }
     }
 
-    /// How long to let the far shell settle before typing into it.
-    ///
-    /// The pane opens before the prompt appears. Typing at once would send the
-    /// text into a shell that is not listening yet.
-    private static let settleBeforeTyping = Duration.milliseconds(700)
-
     /// Types the text a connection carries, once the session is open.
     private func typeAfterConnect(_ text: String, into session: TerminalSession) async {
         let steps = KeySequence.steps(from: text)
         guard !steps.isEmpty else { return }
 
-        try? await Task.sleep(for: Self.settleBeforeTyping)
+        // The pane opens before the prompt appears, and some shells (fish)
+        // drop what arrives while they start.
+        await session.waitForPrompt()
         for step in steps {
             switch step {
             case let .text(piece):

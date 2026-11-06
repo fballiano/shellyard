@@ -49,9 +49,9 @@ final class ReconnectTests: XCTestCase {
         )
 
         let marker = directory.appendingPathComponent("dropped").path
-        // The delay lets a slow login shell start: fish drops what arrives
-        // while it starts up.
-        let drop = "{DELAY:2500}sh -c 'test -e \"\(marker)\" || (touch \"\(marker)\"; sleep 3; "
+        // No delay: Termora must wait for the prompt by itself. With fish,
+        // which drops what arrives while it starts, this proves it does.
+        let drop = "sh -c 'test -e \"\(marker)\" || (touch \"\(marker)\"; sleep 3; "
             + "kill -9 $(ps -o ppid= -p $PPID))'{ENTER}"
         let settings = NodeSettings(
             username: .value(NSUserName()),

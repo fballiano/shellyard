@@ -107,6 +107,29 @@ final class TerminalSession: Identifiable, ObservableObject {
         return reported
     }
 
+    /// Waits until the shell in the pane looks ready for typing.
+    ///
+    /// libghostty tells nothing about output, but it does report the window
+    /// title, and most shells set it as they draw the prompt: fish always,
+    /// bash and zsh on most servers (their default files do it for any
+    /// `xterm*` terminal). After the first change of title, a short pause
+    /// lets the prompt finish. A shell that never sets a title gets
+    /// `fallback`. Typing too early is not harmless: fish drops what arrives
+    /// while it starts.
+    func waitForPrompt(
+        fallback: Duration = .seconds(3), settle: Duration = .milliseconds(300)
+    ) async {
+        let start = ContinuousClock.now
+        let firstTitle = state.title
+        while ContinuousClock.now - start < fallback, !isFinished {
+            if state.title != firstTitle, !state.title.isEmpty {
+                try? await Task.sleep(for: settle)
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     /// Stop drawing a pane that is hidden behind another tab. The grid, the
     /// scrollback, and the child process all stay alive.
     func setVisible(_ isVisible: Bool) {

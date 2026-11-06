@@ -128,7 +128,9 @@ comes from.
   opens, for example to open a firewall.
 - **After connecting** types text into the session when the prompt appears.
   Key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrows, and
-  `{DELAY:500}` work.
+  `{DELAY:500}` work. Termora knows that the prompt is there when the shell
+  sets the window title, as fish does, and as bash and zsh do on most
+  servers. A shell that sets no title gets the text after 3 seconds.
 
 ### Open Connection
 
