@@ -44,8 +44,9 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
     public var position: Int
     /// The host name or the address. This is never inherited.
     public var host: String
-    /// The TCP port. This is never inherited.
-    public var port: Int
+    /// The TCP port, or `nil` to let OpenSSH choose: the `Port` line of
+    /// `~/.ssh/config`, or 22. This is never inherited.
+    public var port: Int?
     public var isFavorite: Bool
     public var settings: NodeSettings
     public var forwards: [PortForward]
@@ -57,7 +58,7 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
         name: String,
         position: Int = 0,
         host: String,
-        port: Int = 22,
+        port: Int? = nil,
         isFavorite: Bool = false,
         settings: NodeSettings = .inheritAll,
         forwards: [PortForward] = [],
@@ -73,6 +74,48 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
         self.settings = settings
         self.forwards = forwards
         self.notes = notes
+    }
+}
+
+extension Connection {
+    private enum CodingKeys: String, CodingKey {
+        case id, parentID, name, position, host, port, portFromSSHConfig
+        case isFavorite, settings, forwards, notes
+    }
+
+    /// The file always holds a number in `port`, because Termora 1.0 cannot
+    /// read a connection without one, and a synced document may still meet
+    /// it on another Mac. A port that is not set is written as 22, with
+    /// `portFromSSHConfig` beside it. Termora 1.0 ignores the flag and uses
+    /// 22, as it always did.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        parentID = try container.decodeIfPresent(UUID.self, forKey: .parentID)
+        name = try container.decode(String.self, forKey: .name)
+        position = try container.decode(Int.self, forKey: .position)
+        host = try container.decode(String.self, forKey: .host)
+        let fromSSHConfig = try container.decodeIfPresent(Bool.self, forKey: .portFromSSHConfig)
+        port = fromSSHConfig == true ? nil : try container.decode(Int.self, forKey: .port)
+        isFavorite = try container.decode(Bool.self, forKey: .isFavorite)
+        settings = try container.decode(NodeSettings.self, forKey: .settings)
+        forwards = try container.decode([PortForward].self, forKey: .forwards)
+        notes = try container.decode(String.self, forKey: .notes)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(parentID, forKey: .parentID)
+        try container.encode(name, forKey: .name)
+        try container.encode(position, forKey: .position)
+        try container.encode(host, forKey: .host)
+        try container.encode(port ?? 22, forKey: .port)
+        if port == nil { try container.encode(true, forKey: .portFromSSHConfig) }
+        try container.encode(isFavorite, forKey: .isFavorite)
+        try container.encode(settings, forKey: .settings)
+        try container.encode(forwards, forKey: .forwards)
+        try container.encode(notes, forKey: .notes)
     }
 }
 

@@ -46,10 +46,11 @@ private struct ConnectionInspector: View {
     init(connection: Connection) {
         self.connection = connection
         _draft = State(initialValue: connection)
-        _portText = State(initialValue: String(connection.port))
+        _portText = State(initialValue: connection.port.map(String.init) ?? "")
     }
 
     private var portProblem: String? {
+        if portText.trimmingCharacters(in: .whitespaces).isEmpty { return nil }
         guard let value = Int(portText), (1 ... 65535).contains(value) else {
             return "The port must be a number between 1 and 65535."
         }
@@ -65,13 +66,26 @@ private struct ConnectionInspector: View {
                         TextField("host.example.com", text: $draft.host)
                     }
                     LabeledRow("Port") {
-                        TextField("22", text: $portText)
-                            .frame(width: 80)
-                            .onChange(of: portText) { _, new in
-                                guard let value = Int(new),
-                                      (1 ... 65535).contains(value) else { return }
-                                draft.port = value
+                        HStack(spacing: 8) {
+                            TextField("22", text: $portText)
+                                .frame(width: 80)
+                                .onChange(of: portText) { _, new in
+                                    // Empty lets OpenSSH choose, so an alias
+                                    // keeps the Port of ~/.ssh/config.
+                                    if new.trimmingCharacters(in: .whitespaces).isEmpty {
+                                        draft.port = nil
+                                        return
+                                    }
+                                    guard let value = Int(new),
+                                          (1 ... 65535).contains(value) else { return }
+                                    draft.port = value
+                                }
+                            if draft.port == nil {
+                                Text("From ~/.ssh/config, or 22")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
+                        }
                     }
                     // The field keeps the last good value, so the problem is
                     // said instead of fixed quietly.

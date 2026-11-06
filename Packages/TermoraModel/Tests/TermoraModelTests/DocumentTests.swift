@@ -429,3 +429,53 @@ struct FolderContentsTests {
         #expect(held.folders <= 2, "A loop must not make the count run for ever.")
     }
 }
+
+// MARK: - The port, and documents shared with Termora 1.0
+
+/// `Connection` as Termora 1.0 decodes it: every field required, and a port
+/// that is always a number.
+private struct ConnectionV1: Codable {
+    var id: UUID
+    var parentID: UUID?
+    var name: String
+    var position: Int
+    var host: String
+    var port: Int
+    var isFavorite: Bool
+    var settings: NodeSettings
+    var forwards: [PortForward]
+    var notes: String
+}
+
+@Test("A port that is not set survives a round trip")
+func unsetPortRoundTrip() throws {
+    let connections = [
+        Connection(name: "alias", host: "web1"),
+        Connection(name: "fixed", host: "web2", port: 2222),
+        Connection(name: "explicit 22", host: "web3", port: 22),
+    ]
+    let data = try JSONEncoder().encode(connections)
+    let decoded = try JSONDecoder().decode([Connection].self, from: data)
+    #expect(decoded.map(\.port) == [nil, 2222, 22])
+}
+
+@Test("Termora 1.0 can still read a connection whose port is not set, and uses 22")
+func unsetPortReadsInVersionOne() throws {
+    let data = try JSONEncoder().encode([
+        Connection(name: "alias", host: "web1"),
+        Connection(name: "fixed", host: "web2", port: 2222),
+    ])
+    let old = try JSONDecoder().decode([ConnectionV1].self, from: data)
+    #expect(old.map(\.port) == [22, 2222])
+}
+
+@Test("A connection written by Termora 1.0 keeps its port")
+func versionOnePortIsKept() throws {
+    let old = ConnectionV1(
+        id: UUID(), parentID: nil, name: "old", position: 0, host: "web1", port: 22,
+        isFavorite: false, settings: .inheritAll, forwards: [], notes: ""
+    )
+    let data = try JSONEncoder().encode(old)
+    let connection = try JSONDecoder().decode(Connection.self, from: data)
+    #expect(connection.port == 22, "A port from 1.0 was set on purpose: it stays.")
+}

@@ -115,6 +115,9 @@ actions: connect, browse files, edit, duplicate, and delete. Drag rows to
 move them between folders. The filter finds a connection by its name or its
 host. A green dot marks a server with an open session.
 
+Leave the port empty to let OpenSSH choose it: the `Port` line of
+`~/.ssh/config` for that host, or 22.
+
 A folder gives its settings to everything inside it: user name, password or
 key, jump host, agent forwarding, compression, X11 forwarding, keep-alive,
 host key policy, colour tag, and the two commands below. A connection

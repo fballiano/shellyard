@@ -50,7 +50,7 @@ struct RealDocumentTests {
     func hasUsableTargets() {
         let (document, _) = RoyalImporter().makeDocument(from: objects)
         #expect(document.connections.allSatisfy { !$0.host.isEmpty })
-        #expect(document.connections.allSatisfy { (1 ... 65535).contains($0.port) })
+        #expect(document.connections.allSatisfy { $0.port.map { (1 ... 65535).contains($0) } ?? true })
     }
 
     @Test("Inheritance survives: an entry that inherited in Royal still inherits")

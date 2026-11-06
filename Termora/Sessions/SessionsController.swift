@@ -202,7 +202,7 @@ final class SessionsController: ObservableObject {
     /// Connections typed into the Open Connection field. They are not in
     /// the document, so they live here while a tab uses them. They hold no
     /// secret: OpenSSH asks for one through the usual sheet.
-    private var quickConnections: [UUID: QuickConnection] = [:]
+    private var quickConnections: [UUID: Connection] = [:]
     private var engineError: String?
 
     init(store: DocumentStore) {
@@ -350,7 +350,7 @@ final class SessionsController: ObservableObject {
                     settings.beforeConnect,
                     values: CommandPlaceholders.Values(
                         host: connection.host,
-                        port: connection.port,
+                        port: connection.port ?? 22,
                         username: settings.username,
                         name: connection.name
                     ),
@@ -394,15 +394,10 @@ final class SessionsController: ObservableObject {
         }
     }
 
-    /// What OpenSSH gets for a connection. A quick connection typed with
-    /// no port sends none, so an alias keeps the port of `~/.ssh/config`.
+    /// What OpenSSH gets for a connection. A connection with no port sends
+    /// none, so an alias keeps the port of `~/.ssh/config`.
     private func target(for connection: Connection, settings: EffectiveSettings) -> SSHTarget {
-        let port: Int? = if let quick = quickConnections[connection.id] {
-            quick.address.port
-        } else {
-            connection.port
-        }
-        return SSHTarget(host: connection.host, port: port, settings: settings)
+        SSHTarget(host: connection.host, port: connection.port, settings: settings)
     }
 
     /// Starts the control master, or returns the live one, and listens for
@@ -524,12 +519,6 @@ final class SessionsController: ObservableObject {
 
     // MARK: - Quick connections
 
-    /// A connection typed into the Open Connection field, with no bookmark.
-    private struct QuickConnection {
-        let address: QuickConnectAddress
-        let connection: Connection
-    }
-
     /// Opens a tab on an address that has no bookmark.
     ///
     /// The connection takes the default settings, with the user name of the
@@ -538,12 +527,12 @@ final class SessionsController: ObservableObject {
         let connection = Connection(
             name: address.text,
             host: address.host,
-            port: address.port ?? 22,
+            port: address.port,
             settings: NodeSettings(
                 username: address.username.isEmpty ? .inherit : .value(address.username)
             )
         )
-        quickConnections[connection.id] = QuickConnection(address: address, connection: connection)
+        quickConnections[connection.id] = connection
         open(connection: connection, kind: kind)
     }
 
@@ -562,7 +551,7 @@ final class SessionsController: ObservableObject {
         guard isQuick(tab), let id = tab.connectionID, let quick = quickConnections[id] else {
             return
         }
-        store.addBookmark(quick.connection)
+        store.addBookmark(quick)
         quickConnections[id] = nil
     }
 
@@ -646,7 +635,7 @@ final class SessionsController: ObservableObject {
                 settings.beforeConnect,
                 values: CommandPlaceholders.Values(
                     host: connection.host,
-                    port: connection.port,
+                    port: connection.port ?? 22,
                     username: settings.username,
                     name: connection.name
                 ),
@@ -815,7 +804,7 @@ final class SessionsController: ObservableObject {
 
     /// The bookmark a tab belongs to, if it is still in the document.
     func connection(of tab: TerminalTab) -> Connection? {
-        tab.connectionID.flatMap { store.index.connection($0) ?? quickConnections[$0]?.connection }
+        tab.connectionID.flatMap { store.index.connection($0) ?? quickConnections[$0] }
     }
 
     /// True when `duplicate(_:)` can open something for the tab.

@@ -224,6 +224,12 @@ seal.
 The master password becomes the key through PBKDF2-HMAC-SHA512 with 600,000
 rounds, which takes about 0.44 seconds on Apple silicon.
 
+A synced document can meet an older Termora on another Mac, so a change to
+the JSON must stay readable there. Termora 1.0 requires every field of a
+connection. A port that is not set is therefore written as `"port": 22`
+with `"portFromSSHConfig": true` beside it: 1.0 ignores the flag and uses
+22. `DocumentTests` decodes the new JSON with the 1.0 shape to prove it.
+
 ### Touch ID without a signing identity
 
 A Keychain item that Touch ID guards needs the `keychain-access-groups`
