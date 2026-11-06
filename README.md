@@ -161,8 +161,14 @@ Reconnect runs the command before connecting again, opens the tunnels again,
 and types the text after connecting into each tab. If a connection could not
 open at all, its tab offers **Try Again**, which ⌘R also does.
 
-Termora finds a dead network through keep-alive. With keep-alive at 0, a
-dropped connection can stay open for minutes before Termora sees it.
+When your Mac wakes from sleep, Termora reconnects by itself. It waits for
+the network, then asks each server if the connection still works, and
+reconnects the ones that do not. With **Lock when the Mac sleeps** on, the
+document is locked instead, and nothing is open to reconnect.
+
+At other times, Termora finds a dead network through keep-alive. With
+keep-alive at 0, a dropped connection can stay open for minutes before
+Termora sees it.
 
 ### Tabs, splits and local shells
 

@@ -163,6 +163,12 @@ pane gets its own `TerminalSurfaceView` (`.id(session.id)`), because a
 surface cannot take a second session. A new tab may already have opened a
 live master (⌘T on a lost tab); Reconnect then uses it.
 
+After a sleep, `SessionsController` waits for a network path (up to 30
+seconds), runs `true` over each live master with a 10-second limit, drops
+the masters that fail, and reconnects every lost tab. A master runs on this
+Mac, so only a round trip to the server shows that it still works. No UI
+test can put the Mac to sleep, so this path has no automated test.
+
 The package test drops the connection from the server side.
 `TestSSHServer.dropConnections()` kills the whole process tree under the
 listener: killing only `sshd-session [postauth]` moves its worker to

@@ -5,6 +5,7 @@
 
 import Foundation
 import GhosttyTerminal
+import Network
 import SwiftUI
 import TermoraModel
 import TermoraSSH
@@ -205,8 +206,16 @@ final class SessionsController: ObservableObject {
     private var quickConnections: [UUID: Connection] = [:]
     private var engineError: String?
 
+    /// Lives as long as the application, so it is never removed.
+    private var wakeObserver: (any NSObjectProtocol)?
+
     init(store: DocumentStore) {
         self.store = store
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.recoverAfterWake() }
+        }
     }
 
     /// Builds the SSH engine the first time a connection is opened.
@@ -436,6 +445,44 @@ final class SessionsController: ObservableObject {
             tab.lostReason = reason
         }
         tabPhaseChanged()
+    }
+
+    // MARK: - After a sleep
+
+    /// Brings back the connections that a sleep of this Mac broke.
+    ///
+    /// With "lock on sleep" on, the document is locked and nothing is open,
+    /// so there is nothing to do. Otherwise a connection is often lost by
+    /// now, or worse, looks open while it no longer reaches the server:
+    /// OpenSSH finds that out only through keep-alive, minutes later.
+    private func recoverAfterWake() {
+        guard store.isUnlocked else { return }
+        let ids = Set(tabs.filter { !$0.isLocal && $0.phase == .ready }.compactMap(\.connectionID))
+        guard !ids.isEmpty else { return }
+
+        Task {
+            // Wi-Fi takes a few seconds to come back. A reconnect before
+            // that fails with "Could not resolve hostname".
+            await NetworkWait.untilOnline(limit: .seconds(30))
+            for id in ids {
+                Task { await recoverAfterWake(id) }
+            }
+        }
+    }
+
+    private func recoverAfterWake(_ connectionID: UUID) async {
+        if let sshConnection = engineStorage?.connection(for: connectionID),
+           sshConnection.isConnected {
+            // The master runs on this Mac, so only the server can say that
+            // the connection still works.
+            if await sshConnection.run(["true"], limit: 10).succeeded { return }
+            await engineStorage?.disconnect(id: connectionID)
+            connectionLost(connectionID, reason: "The connection did not survive the sleep of this Mac.")
+        }
+        guard store.isUnlocked,
+              let tab = tabs.first(where: { $0.connectionID == connectionID && $0.lostReason != nil })
+        else { return }
+        reconnect(tab)
     }
 
     /// True when the tab can connect again: its connection was lost, or its
@@ -920,6 +967,27 @@ extension SessionsController: SSHEngineDelegate {
                 prompt: prompt,
                 continuation: continuation
             )
+        }
+    }
+}
+
+/// Waits for a network path, for the reconnect after a sleep.
+private enum NetworkWait {
+    /// Returns when this Mac has a usable network path, or after `limit`.
+    static func untilOnline(limit: Duration) async {
+        let monitor = NWPathMonitor()
+        let statuses = AsyncStream<NWPath.Status> { continuation in
+            monitor.pathUpdateHandler = { continuation.yield($0.status) }
+            continuation.onTermination = { _ in monitor.cancel() }
+            monitor.start(queue: DispatchQueue(label: "Termora.NetworkWait"))
+        }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await status in statuses where status == .satisfied { return }
+            }
+            group.addTask { try? await Task.sleep(for: limit) }
+            await group.next()
+            group.cancelAll()
         }
     }
 }
