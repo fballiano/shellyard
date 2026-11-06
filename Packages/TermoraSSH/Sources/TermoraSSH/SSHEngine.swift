@@ -51,9 +51,7 @@ public final class SSHEngine: ObservableObject {
     public init(helperPath: String) throws {
         self.helperPath = helperPath
 
-        // Short, and inside the per-user temporary directory, because a Unix
-        // socket path may not exceed 104 bytes.
-        controlDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
+        controlDirectory = Self.controlDirectory
         service = try AskpassService()
         // The service holds a weak reference back, so the engine can own it
         // without the two keeping each other alive.
@@ -64,6 +62,24 @@ public final class SSHEngine: ObservableObject {
     }
 
     deinit { service.stop() }
+
+    /// Short, and inside the per-user temporary directory, because a Unix
+    /// socket path may not exceed 104 bytes.
+    private static let controlDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
+
+    // MARK: - Leftovers of an earlier run
+
+    /// The one cleanup of this process. See `LeftoverMasters`.
+    private static var leftoverCleanup: Task<Void, Never>?
+
+    /// Closes the masters that an earlier run of Termora left behind, and
+    /// removes their dead sockets. Call it at launch. It runs once per
+    /// process, in the background; the first connect waits for it.
+    public static func clearLeftoverMasters() {
+        guard leftoverCleanup == nil else { return }
+        let directory = controlDirectory
+        leftoverCleanup = Task { await LeftoverMasters.clear(in: directory) }
+    }
 
     // MARK: - Connections
 
@@ -76,9 +92,15 @@ public final class SSHEngine: ObservableObject {
             return existing
         }
 
+        // A dead socket left on this path would stop the new master from
+        // binding it. The cleanup removes it first.
+        Self.clearLeftoverMasters()
+        await Self.leftoverCleanup?.value
+
         let token = Self.makeToken()
-        let controlPath = controlDirectory
-            .appendingPathComponent("tc-\(id.uuidString.prefix(8)).sock").path
+        let controlPath = controlDirectory.appendingPathComponent(
+            LeftoverMasters.socketPrefix + id.uuidString.prefix(8) + LeftoverMasters.socketSuffix
+        ).path
 
         let connection = SSHConnection(
             id: id,

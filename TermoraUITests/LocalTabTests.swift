@@ -88,6 +88,26 @@ final class LocalTabTests: XCTestCase {
                       "⌘T on a local tab must open a second local tab.")
     }
 
+    /// ⌃⌘L closes every session, as the README promises. After the unlock,
+    /// no tab from before the lock is left.
+    func testLockClosesEverySession() throws {
+        let (app, main) = unlockedWindow()
+
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(localTabs(in: main).firstMatch.waitForExistence(timeout: 5))
+        sleep(1)
+
+        app.typeKey("l", modifierFlags: [.command, .control])
+        let field = main.secureTextFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "⌃⌘L must lock the document.")
+        field.click()
+        field.typeText("\(Self.password)\r")
+        XCTAssertTrue(main.staticTexts["web-01"].waitForExistence(timeout: 10))
+
+        XCTAssertFalse(localTabs(in: main).firstMatch.exists,
+                       "A lock must close every session, local shells too.")
+    }
+
     // MARK: - Helpers
 
     private func unlockedWindow() -> (XCUIApplication, XCUIElement) {

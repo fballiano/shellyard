@@ -61,12 +61,10 @@ final class AutoLockController: ObservableObject {
         lockNow()
     }
 
-    /// Closes every session first. A connection left open beside a locked
-    /// document would keep the far host reachable while the screen says
-    /// everything is sealed.
+    /// The store closes every session before it locks: see
+    /// `DocumentStore.willClose`.
     private func lockNow() {
         guard let store, store.isUnlocked else { return }
-        sessions?.closeAllTabs()
         store.lock()
     }
 }

@@ -41,6 +41,11 @@ final class DocumentStore: ObservableObject {
 
     private var vault: Vault?
 
+    /// Runs just before an open document closes: a lock from any place, a
+    /// switch to another document, or Forget. The sessions controller closes
+    /// every session here, so nothing stays open behind a closed document.
+    var willClose: (() -> Void)?
+
     private static let lastDocumentKey = "TermoraLastDocumentPath"
     private static let recentDocumentsKey = "TermoraRecentDocumentPaths"
     private static let recentDocumentsLimit = 5
@@ -155,6 +160,7 @@ final class DocumentStore: ObservableObject {
     }
 
     func lock() {
+        if isUnlocked { willClose?() }
         vault = nil
         index = DocumentIndex(.empty)
         selection = nil
@@ -167,6 +173,7 @@ final class DocumentStore: ObservableObject {
     }
 
     func forgetDocument() {
+        if isUnlocked { willClose?() }
         vault = nil
         documentURL = nil
         index = DocumentIndex(.empty)

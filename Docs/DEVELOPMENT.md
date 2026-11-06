@@ -128,6 +128,26 @@ keep the connection and its tunnels alive. A second tab on a live master
 does not run the command before connecting again and does not open the
 tunnels again.
 
+### Masters that outlive Termora
+
+A master is a process of its own, so it can outlive the application. Termora
+closes every master on each lock and on each quit, also the masters of
+`termora run`, which have no tab. Every lock path goes through
+`DocumentStore.willClose`, which calls `SessionsController.closeEverything()`.
+
+A crash or Force Quit gives Termora no chance to close anything. The masters
+then run on under launchd, with their connections and tunnels, and a master
+that died leaves its socket file, which stops a new master from binding that
+path. At launch, `SSHEngine.clearLeftoverMasters()` looks at every
+`tc-*.sock` in the control folder:
+
+- No master answers `ssh -O check`: the file is removed.
+- The master is `ssh` and its parent is launchd (PID 1): it gets `-O exit`.
+- The master has a live parent: it belongs to a copy of Termora that runs
+  now, and it is left alone.
+
+The first connect waits for this work to end.
+
 ### When the master stops
 
 `SSHConnection.onLost` fires when the master exits while it was connected

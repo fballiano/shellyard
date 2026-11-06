@@ -101,6 +101,91 @@ final class SSHIntegrationTests {
         #expect(reasons.count == 1)
     }
 
+    @Test("At launch, an orphaned master closes, a dead socket goes, and a live owner's master stays")
+    func clearsLeftoverMasters() async throws {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lm-\(UUID().uuidString.prefix(8))")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let target = target(keyPath: server.plainKeyPath, passphrase: "")
+
+        // A master whose parent is gone: `sh` starts it in the background
+        // and exits, so launchd adopts it, as after a crash of Termora.
+        let orphanPath = directory.appendingPathComponent("tc-orphan1.sock").path
+        let orphanLine = POSIXQuote.line(
+            [SSHCommand.executable] + SSHCommand.master(target: target, controlPath: orphanPath)
+        )
+        let starter = Process()
+        starter.executableURL = URL(fileURLWithPath: "/bin/sh")
+        starter.arguments = ["-c", "\(orphanLine) </dev/null >/dev/null 2>&1 &"]
+        try starter.run()
+        starter.waitUntilExit()
+
+        // A master whose parent still runs: this test. Another copy of
+        // Termora that runs now looks the same.
+        let ownedPath = directory.appendingPathComponent("tc-owned01.sock").path
+        let owned = Process()
+        owned.executableURL = URL(fileURLWithPath: SSHCommand.executable)
+        owned.arguments = SSHCommand.master(target: target, controlPath: ownedPath)
+        owned.standardError = Pipe()
+        try owned.run()
+        defer { if owned.isRunning { owned.terminate() } }
+
+        // A socket that no master answers.
+        let deadPath = directory.appendingPathComponent("tc-dead0001.sock").path
+        try makeDeadSocket(at: deadPath)
+
+        #expect(await waitForMaster(at: orphanPath), "The orphaned master did not start.")
+        #expect(await waitForMaster(at: ownedPath), "The owned master did not start.")
+
+        let outcome = await LeftoverMasters.clear(in: directory)
+        #expect(outcome == .init(closedMasters: 1, removedSockets: 1))
+        #expect(!(await isMaster(at: orphanPath)), "The orphaned master must close.")
+        #expect(await isMaster(at: ownedPath), "A master with a live parent must stay.")
+        #expect(!FileManager.default.fileExists(atPath: deadPath), "The dead socket must go.")
+    }
+
+    @Test("The answer of ssh -O check gives the pid of the master")
+    func readsMasterPID() {
+        #expect(LeftoverMasters.masterPID(in: "Master running (pid=4321)\r\n") == 4321)
+        #expect(LeftoverMasters.masterPID(in: "Control socket connect: No such file") == nil)
+    }
+
+    private func isMaster(at path: String) async -> Bool {
+        await ProcessRunner.run(
+            SSHCommand.executable, ["-S", path, "-O", "check", "termora"], limit: 5
+        ).succeeded
+    }
+
+    private func waitForMaster(at path: String) async -> Bool {
+        for _ in 0..<100 {
+            if await isMaster(at: path) { return true }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return false
+    }
+
+    /// Binds a Unix socket and closes it without removing the file, as a
+    /// master that is killed does.
+    private func makeDeadSocket(at path: String) throws {
+        let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
+        try #require(descriptor >= 0)
+        defer { close(descriptor) }
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        let bytes = Array(path.utf8)
+        try #require(bytes.count < MemoryLayout.size(ofValue: address.sun_path))
+        withUnsafeMutableBytes(of: &address.sun_path) { buffer in
+            buffer.copyBytes(from: bytes)
+        }
+        let result = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        try #require(result == 0, "bind failed: \(errno)")
+    }
+
     @Test("The terminal description reaches the far host over the master")
     func installsTheTerminalDescription() async throws {
         try #require(FileManager.default.isExecutableFile(atPath: "/usr/bin/tic"))

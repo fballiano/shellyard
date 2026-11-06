@@ -844,10 +844,22 @@ final class SessionsController: ObservableObject {
         for other in tabs where other.id != tabID { closeTab(other.id) }
     }
 
-    /// Closes every tab and every connection. The auto-lock calls this, so a
-    /// locked document never leaves a live session behind it.
-    func closeAllTabs() {
+    /// Closes every tab, every connection, and every edit. The document
+    /// store calls this before it locks, so a locked document never leaves a
+    /// live session or tunnel behind it.
+    ///
+    /// The tabs are not enough: `termora run` keeps masters with no tab.
+    func closeEverything() {
         for id in tabs.map(\.id) { closeTab(id) }
+        remoteEdits.endAll()
+        if let engineStorage {
+            Task { await engineStorage.disconnectAll() }
+        }
+    }
+
+    /// True while any master is open, with or without a tab.
+    var hasConnections: Bool {
+        !(engineStorage?.connections.isEmpty ?? true)
     }
 
     func closeSelectedTab() {

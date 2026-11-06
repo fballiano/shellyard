@@ -5,6 +5,7 @@
 
 import AppKit
 import SwiftUI
+import TermoraSSH
 
 /// The main window's last frame and full-screen state, across launches.
 ///
@@ -81,6 +82,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // A crash or Force Quit leaves control masters running, with their
+        // connections and tunnels. Close them now, in the background.
+        SSHEngine.clearLeftoverMasters()
         tabKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // An arrow key also raises `.function` and `.numericPad`, so the
             // comparison drops them before it looks for ⌘⌥ alone.
@@ -146,7 +150,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication)
         -> NSApplication.TerminateReply {
         isTerminating = true
-        guard let sessions, !sessions.tabs.isEmpty else { return .terminateNow }
+        guard let sessions else { return .terminateNow }
+        if sessions.tabs.isEmpty {
+            // `termora run` keeps masters with no tab. They close too, and
+            // there is nothing to ask about.
+            guard sessions.hasConnections else { return .terminateNow }
+            Task {
+                await sessions.disconnectEverything()
+                sender.reply(toApplicationShouldTerminate: true)
+            }
+            return .terminateLater
+        }
 
         if AppSettings.confirmQuit {
             let count = sessions.tabs.count
@@ -189,6 +203,13 @@ struct TermoraApp: App {
         _store = StateObject(wrappedValue: store)
         let sessions = MainActor.assumeIsolated { SessionsController(store: store) }
         _sessions = StateObject(wrappedValue: sessions)
+        // Every way to close the document closes the sessions first: ⌃⌘L,
+        // the lock in the title bar, the auto-lock, and a switch to another
+        // document. A connection left open beside a locked document would
+        // keep the far host reachable while the screen says it is sealed.
+        MainActor.assumeIsolated {
+            store.willClose = { [weak sessions] in sessions?.closeEverything() }
+        }
         _importer = StateObject(wrappedValue: MainActor.assumeIsolated {
             ImportController(store: store)
         })
