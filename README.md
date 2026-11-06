@@ -70,14 +70,8 @@ Or download the zip from the
 [latest release](https://github.com/fballiano/termora/releases/latest) and
 drag **Termora** into **Applications**.
 
-> [!IMPORTANT]
-> macOS blocks the first launch, because Termora is not signed with an Apple
-> Developer ID. Open **System Settings → Privacy & Security** and select
-> **Open Anyway**, or run:
->
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/Termora.app
-> ```
+Termora is signed with an Apple Developer ID and notarized by Apple, so it
+opens like any other application.
 
 ## Getting started
 
@@ -293,6 +287,12 @@ with `Error opening terminal`. Termora installs the description one time, in
 **How do I use the same bookmarks on two Macs?**
 Put the document in a folder that you sync, such as iCloud Drive, and open
 it on the other Mac with **Open a document…** and the same master password.
+
+**Termora asks for things again after the update to 1.1.1. Why?**
+1.1.1 is the first version signed with a Developer ID, and macOS sees a new
+signature as a new application. It can ask one more time for permission to
+control Royal TSX during an import. If Touch ID stops opening the document,
+type the master password once and turn Touch ID on again in **Settings**.
 
 **I forgot my master password. Can I recover the document?**
 No. Nobody can recover the password. If Touch ID is on for the document, it
