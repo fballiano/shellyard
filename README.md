@@ -20,28 +20,34 @@
 
 ---
 
-Termora replaces Royal TSX for SSH work. It embeds the Ghostty terminal
-engine through libghostty, and it drives the OpenSSH of macOS, so your
-`~/.ssh/config`, your keys and your agent all work as they stand.
+Termora is an SSH connection manager for macOS. It keeps your servers, their
+passwords, and their tunnels in one encrypted file, and it opens them in the
+Ghostty terminal engine. It also opens a shell on your Mac, so one window
+holds all of your terminal work.
+
+Termora drives the OpenSSH of macOS. Your `~/.ssh/config`, your keys, and
+your SSH agent all work as they stand.
 
 ## Features
 
 <table>
 <tr><td><b>A bookmark tree</b></td><td>Folders pass credentials and settings down. A connection overrides only what it sets.</td></tr>
 <tr><td><b>Your terminal</b></td><td>The Ghostty engine reads your own Ghostty configuration, so a pane looks like your terminal.</td></tr>
+<tr><td><b>Local shells</b></td><td>A shell on this Mac, beside your servers, so you do not switch to another terminal.</td></tr>
+<tr><td><b>Tabs and splits</b></td><td>Tabs live in the title bar. ⌘T opens a tab like the one in front, ⌘D and ⇧⌘D split.</td></tr>
 <tr><td><b>One connection</b></td><td>One control master carries every pane, every tunnel and the file browser. Nothing authenticates twice.</td></tr>
-<tr><td><b>htop just works</b></td><td>Termora teaches each server what <code>xterm-ghostty</code> is, once, over the connection it already has. A server that refuses hears <code>xterm-256color</code>.</td></tr>
-<tr><td><b>Tabs and splits</b></td><td>Tabs live in the title bar. ⌘D splits right, ⇧⌘D splits down, ⌘1…⌘9 switch, ⌥⌘← and ⌥⌘→ walk.</td></tr>
-<tr><td><b>Local shells</b></td><td>A shell on this Mac, beside your servers. ⌘T opens a new tab like the one in front: the same connection, or a local shell in the same folder. ⇧⌘T always opens a local shell.</td></tr>
+<tr><td><b>htop just works</b></td><td>Termora teaches each server what <code>xterm-ghostty</code> is, once. A server that refuses gets <code>xterm-256color</code>.</td></tr>
 <tr><td><b>Live tunnels</b></td><td>Local, remote and SOCKS. A switch opens or closes a tunnel on an open connection, with no reconnect.</td></tr>
-<tr><td><b>A file browser</b></td><td>This Mac on the left, the far host on the right. Drag both ways, with Finder file promises.</td></tr>
+<tr><td><b>A file browser</b></td><td>This Mac on the left, the server on the right. Drag both ways, also to and from Finder.</td></tr>
 <tr><td><b>One encrypted file</b></td><td>AES-256-GCM behind a master password. Put it wherever you sync your files.</td></tr>
-<tr><td><b>Touch ID</b></td><td>The key can rest in the Secure Enclave, so unlock is one touch. The password still works anywhere.</td></tr>
-<tr><td><b>Royal TSX import</b></td><td>Folders, connections, tasks and saved passwords come across, with a report of everything that did not.</td></tr>
-<tr><td><b>Agent ready</b></td><td>A bundled <code>termora</code> CLI lets a script or an AI agent list bookmarks and run commands over your connections. No secret ever reaches the tool.</td></tr>
+<tr><td><b>Touch ID</b></td><td>The key can stay in the Secure Enclave, so unlock is one touch. The password still works on any Mac.</td></tr>
+<tr><td><b>Royal TSX import</b></td><td>Folders, connections, key sequences and saved passwords come across, with a report of everything that did not.</td></tr>
+<tr><td><b>Agent ready</b></td><td>A bundled <code>termora</code> command lets a script or an AI agent run commands on your servers. No secret reaches the tool.</td></tr>
 </table>
 
 ## Install
+
+Termora needs macOS 26 or later on Apple silicon.
 
 With [Homebrew](https://brew.sh):
 
@@ -51,14 +57,13 @@ brew trust --cask fballiano/termora/termora
 brew install --cask fballiano/termora/termora
 ```
 
-The URL is part of the first command, because this repository is the tap
-itself. Homebrew 6 refuses a cask from a tap outside `Homebrew/*` until you
-trust it, so the second command is also necessary. The full name in the
-third command matters too: a different application also called “termora”
-exists in the main cask repository.
+This repository is the tap, so the first command includes its URL. Homebrew
+refuses a cask from a tap outside `Homebrew/*` until you trust it, so the
+second command is necessary. Always use the full name
+`fballiano/termora/termora`: the main cask repository has a different
+application that is also called "termora".
 
-To update, use the full name again. With only `termora`, Homebrew replaces
-Termora with that other application:
+To update:
 
 ```bash
 brew update
@@ -70,279 +75,168 @@ Or download the zip from the
 drag **Termora** into **Applications**.
 
 > [!IMPORTANT]
-> The application is signed ad hoc, not with an Apple Developer ID, so macOS
+> The application has an ad-hoc signature, not an Apple Developer ID, so macOS
 > blocks the first launch. Open **System Settings → Privacy & Security** and
-> select **Open Anyway**, or clear the mark from a terminal:
+> select **Open Anyway**, or remove the quarantine mark from a terminal:
 >
 > ```bash
 > xattr -dr com.apple.quarantine /Applications/Termora.app
 > ```
 
-| Item | Value |
+## Getting started
+
+1. Start Termora and select **Create a document…**. Choose a place for the
+   file and a master password. Nobody can recover this password, so keep it
+   safe.
+2. Add your servers. Press ⌘N for a new connection, or ⇧⌘N for a folder. If
+   you use Royal TSX, select **File → Import from Royal TSX…** instead.
+3. Double-click a connection to open it. Select **Local Shell** at the top of
+   the sidebar, or press ⇧⌘T, for a shell on your Mac.
+
+On a different Mac, select **Open a document…** and give the same file and
+password.
+
+## Bookmarks and folders
+
+The sidebar holds a tree of folders and connections. A folder gives its
+settings to everything inside it: user name, password or key, jump host,
+agent forwarding, compression, X11 forwarding, keep-alive, host key policy,
+colour tag, the command before connecting, and the text after connecting. A connection overrides only what it sets itself. The editor
+shows where each value comes from.
+
+- A double-click on a connection opens it.
+- A right-click offers the other actions: connect, browse files, edit,
+  duplicate, and delete.
+- Drag a row to move it into a folder or out of one.
+- The filter at the top finds connections by name or by host.
+- A green dot shows a connection with an open session.
+
+The editor opens as a sheet over the window, so the terminal keeps its room.
+Changes apply immediately.
+
+**Before connecting** is a command that runs on this Mac before the
+connection opens, for example to open a firewall. **After connecting** is
+text that Termora types into the session when the prompt appears. It accepts
+key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrow names, and
+`{DELAY:500}`.
+
+## Tabs, splits and local shells
+
+Every connection opens in a tab in the title bar. A tab can hold several
+panes side by side or one above the other.
+
+**⌘T** opens a new tab like the one in front:
+
+- On a connection tab, it opens the same connection again. The new tab uses
+  the open connection, so nothing asks for a password, and the command before
+  connecting does not run again.
+- On a local tab, it opens a local shell in the same folder.
+- With no tab open, it opens a local shell in your home folder.
+
+**⇧⌘T** always opens a local shell. So does **Local Shell** at the top of the
+sidebar.
+
+A local tab runs your login shell on this Mac, with the same Ghostty engine
+and configuration. Its tab shows the name of the current folder, and a split
+opens in the same folder. When you type `exit`, the pane closes.
+
+## Keyboard shortcuts
+
+| Keys | Action |
 | --- | --- |
-| macOS | 26.0 or later |
-| Hardware | Apple silicon |
+| ⌘N | New connection |
+| ⇧⌘N | New folder |
+| ⌘T | New tab like the one in front |
+| ⇧⌘T | New local shell |
+| ⌘↩ | Connect to the selected bookmark |
+| ⇧⌘F | Browse the files of the selected bookmark |
+| ⌘D | Split right |
+| ⇧⌘D | Split down |
+| ⌘1 … ⌘9 | Go to tab 1 … 9 |
+| ⇧⌘] or ⌥⌘→ | Next tab |
+| ⇧⌘[ or ⌥⌘← | Previous tab |
+| ⌘W | Close the tab |
+| ⇧⌘W | Close the window |
+| ⌃⌘L | Lock the document |
 
-A push of a tag `v*` builds the application from GitHub Actions, publishes
-the release, and points the Homebrew cask at it.
+## Tunnels
 
-## Requirements to build
+A connection holds a list of tunnels: local, remote, or dynamic (SOCKS). You
+edit them in the editor of the connection.
 
-- macOS 26 or later
-- Xcode 26 or later
-- XcodeGen (`brew install xcodegen`)
+When the connection is closed, a checkbox decides if a tunnel opens with it.
+When the connection is open, the checkbox becomes a switch that opens or
+closes that tunnel immediately. Nothing reconnects.
 
-## Build
+Every row says in words what the tunnel does, for example
+`localhost:8080 → localhost:80`, so you can see two ports in the wrong order
+before you connect. The editor also tells you about a port that OpenSSH will
+refuse, and about two tunnels on the same port.
 
-```sh
-xcodegen generate
-open Termora.xcodeproj
-```
+## Files
 
-Or from the command line:
+**Session → Browse Files** (⇧⌘F) opens a file browser in its own tab. This
+Mac is on the left and the server is on the right. The browser uses the open
+connection, so nothing asks for a password again, and it does not disturb
+your terminal panes.
 
-```sh
-xcodegen generate
-xcodebuild -project Termora.xcodeproj -scheme Termora \
-           -configuration Debug -derivedDataPath build build
-open build/Build/Products/Debug/Termora.app
-```
+- Drag files or folders from one side to the other to copy them. A progress
+  bar shows the whole copy, also for a large folder.
+- Drag files from Finder into the list to copy them to the server, and drag
+  rows out of the list to copy them to Finder.
+- Rename, make folders, and delete on both sides.
+- Double-click a remote file to open it in an application on your Mac. When
+  you save it, Termora copies it back. If the file changed on the server in
+  the meantime, Termora asks before it overwrites it.
 
-`Termora.xcodeproj` is generated. Do not edit it. Change `project.yml`
-and run `xcodegen generate` again.
+A folder copy leaves out symbolic links, so a link that points to its own
+parent cannot make the copy run forever. The count of skipped links shows at
+the end.
 
-## Layout
+## Terminal appearance
 
-| Path | Purpose |
-|---|---|
-| `Termora/Terminal` | The only code that calls libghostty |
-| `Termora/UI` | Sidebar, tabs, splits, inspector |
-| `Packages/TermoraModel` | The object tree and folder inheritance |
-| `Packages/TermoraVault` | The encrypted document and the Touch ID cache |
-| `Packages/TermoraSSH` | The control master, the askpass service, and tunnels |
-| `Packages/TermoraImport` | The Royal TSX reader and the AppleScript bridge |
-| `Packages/TermoraSFTP` | The SFTP version 3 client and the file browser model |
-| `TermoraUITests` | Tests that drive the real application |
-| `Tools/` | The `termora-askpass` helper and the `termora` command |
-| `Agents/`, `plugins/` | The agent integrations, one folder per agent |
-
-## Terminal configuration
-
-Termora reads your own Ghostty configuration file, so a pane looks exactly
-like your normal Ghostty window. It looks in this order:
+Termora reads your own Ghostty configuration file, so a pane looks the same as
+your Ghostty window. It looks in this order:
 
 1. `$XDG_CONFIG_HOME/ghostty/config`
 2. `~/.config/ghostty/config`
 3. `~/Library/Application Support/com.mitchellh.ghostty/config`
 
-Termora never writes to that file.
+Fonts, colours, and a `theme = <name>` line all work, also in the
+`light:One,dark:Two` form. Termora never writes to the file.
 
-Termora applies no colours of its own. The package it uses would otherwise put
-its own theme over everything, and a pane would look nothing like the Ghostty
-window you use every day. See `GhosttyEnvironment`.
+Ghostty calls itself `xterm-ghostty`, and most servers do not know that name.
+Programs such as `htop`, `vim`, and `less` then stop with
+`Error opening terminal`. To prevent this, Termora installs the description
+on each server one time, in `~/.terminfo` in your home folder there. If the
+server cannot accept it (no `tic`, or a read-only home folder), Termora uses
+`xterm-256color`, which every server knows.
 
-## The document
+## Security
 
-Termora keeps everything in one file, for example `Connections.termora`.
-Put that file wherever you sync your files.
-
-```
-"TERMORA1"        8 bytes
-header length     4 bytes, big-endian
-header            JSON: format version, cipher, key derivation parameters
-body              AES-256-GCM: nonce, ciphertext, tag
-```
-
-The header stays readable so that Termora can find the key derivation
-parameters before it asks you for a password. Everything else, including every
-host name, is inside the sealed body. The header travels as additional
-authenticated data, so a change to the salt or to the round count breaks the
-seal instead of passing unnoticed.
-
-The master password becomes the key through PBKDF2-HMAC-SHA512 with 600000
-rounds, which takes about 0.44 seconds on Apple silicon.
-
-Termora can also keep the derived key in the login Keychain behind Touch ID.
-That is only a convenience. The file still opens with the master password on
-any machine.
-
-## Tests
-
-```sh
-(cd Packages/TermoraModel && swift test)
-(cd Packages/TermoraVault && swift test)
-xcodebuild -project Termora.xcodeproj -scheme Termora \
-           -destination 'platform=macOS,arch=arm64' -derivedDataPath build test
-```
-
-The UI tests write a document with the vault API, then start the application
-with `-TermoraLastDocumentPath <path>`. `UserDefaults` reads `-key value`
-pairs from the command line, so the application needs no test-only code.
-
-The SSH tests start their own OpenSSH server on a high port, in its own
-directory, and build `termora-askpass` from source. They read and write
-nothing in your `~/.ssh`. They are skipped when `/usr/sbin/sshd` is missing.
-
-The SFTP tests talk to `/usr/libexec/sftp-server`, which macOS ships. It is
-the same program OpenSSH runs for the `sftp` subsystem, so the protocol is
-real, with no network and no keys. Each test works inside its own temporary
-folder and removes it afterwards.
-
-The import tests also run against a real Royal TSX document when one is
-present. They read it and never write it, and they check counts and shapes
-only: no host name, no user name, and no secret is printed. Set
-`TERMORA_ROYAL_DOCUMENT` to point at your own file. The suite is skipped when
-no document is found.
-
-## How a connection works
-
-Termora never speaks the SSH protocol. It drives `/usr/bin/ssh`, so it
-inherits `~/.ssh/config`, certificates, FIDO keys, agent support, and
-`known_hosts` without repeating any of it.
-
-One control master carries the whole connection:
-
-```
-ssh -M -N -T -S <socket> …          authenticates once
-ssh -S <socket> -o ControlMaster=no <host>          a terminal pane
-ssh -S <socket> -o ControlMaster=no <host> -s sftp  the SFTP channel
-ssh -S <socket> -O forward -L …     a tunnel, added while connected
-ssh -S <socket> -O exit             closes everything
-```
-
-The master is separate from every pane, so you can close all the panes and
-keep the connection and its tunnels alive.
-
-### The terminal the server sees
-
-Termora draws with the Ghostty engine, and Ghostty calls itself
-`xterm-ghostty`. OpenSSH copies `TERM` into the request for the far terminal,
-and almost no server holds that description, so `htop`, `vim`, and `less` stop
-with `Error opening terminal: xterm-ghostty`.
-
-Termora puts the description on the server itself, once, as soon as the master
-is up:
-
-```
-infocmp -x xterm-ghostty                     from the description inside Termora
-ssh -S <socket> <host> sh -c '…tic -x -o "$HOME/.terminfo" -…'
-```
-
-The work rides the control master, so nobody is asked for a password again. It
-writes one file, `~/.terminfo/78/xterm-ghostty`, and nothing else. A record in
-`~/Library/Caches/Termora/terminfo.json` keeps Termora from doing it twice; a
-new version of the description replaces the old one.
-
-A server that has no `tic`, or a read-only home directory, is left alone. The
-pane then announces `xterm-256color`, which every server understands, so the
-connection always works. Every pane runs
-`/usr/bin/env TERM=<name> /usr/bin/ssh …`, and the name is the one the server
-proved it understands.
-
-### Tunnels
-
-A connection carries a list of tunnels: local, remote, or dynamic (SOCKS).
-You edit them in the inspector.
-
-While the connection is closed, a checkbox decides whether a tunnel opens with
-it. While the connection is open, the checkbox becomes a switch that opens or
-closes that one tunnel at once. Nothing reconnects, because OpenSSH changes a
-tunnel on the control socket.
-
-Every row says in words what the tunnel does, for example
-`localhost:8080 → localhost:80`, so two ports the wrong way round are visible
-before you connect. A port OpenSSH would refuse, and two tunnels that listen on
-the same port, are both reported in the inspector rather than at connection
-time.
-
-### The bookmark tree
-
-A double click on a connection opens it. A right click offers the rest:
-connect, browse files, edit, duplicate, delete. The editor appears as a sheet
-over the window rather than a panel beside it, so the terminal keeps the room.
-
-### Local shells
-
-Termora also opens a shell on this Mac, so you do not have to switch to
-another terminal for local work. A local tab runs your login shell through the
-same Ghostty engine, with your own Ghostty configuration.
-
-- **Local Shell**, at the top of the sidebar, opens a local tab. It sits above
-  the filter, because the filter finds bookmarks only.
-- **⌘T** opens a new tab like the one in front. On a connection tab it opens
-  the same connection again, on the live control master, so nothing asks for a
-  password and the command before connecting does not run again. On a local
-  tab it opens a local shell in the same folder. With no tab, it opens a local
-  shell in your home folder.
-- **⇧⌘T** always opens a local shell.
-- A split in a local tab opens a local shell in the folder of the focused
-  pane.
-- A local tab shows the name of its folder, when the shell reports it
-  (OSC 7). `exit` closes the pane, the same as in Ghostty.
-
-A local tab has no connection, no secrets and no askpass. When the document
-locks, local tabs close with every other tab.
-
-### Files
-
-**Session, Browse Files** opens a file browser in its own tab. It has two
-panes: this Mac on the left, the far host on the right. A copy is a drag from
-one side to the other.
-
-It travels on
-the same control master as the terminal panes, so nothing authenticates twice,
-and closing the browser leaves every pane alone.
-
-Termora speaks SFTP version 3 itself, on the channel that
-`ssh … -s sftp` opens. There is no second process, no second password, and no
-cryptography in Termora.
-
-The browser lists, opens folders, renames, makes folders, deletes, and copies
-in both directions with a progress bar.
-
-A folder is copied with everything inside it, in either direction. Termora
-counts the whole tree first, so one progress bar runs from start to finish
-instead of restarting at every file. A symbolic link is left out rather than
-followed, so a link that points at its own parent cannot make the copy run for
-ever, and the count of skipped links is reported when the copy ends.
-
-Drag works both ways, and with any number of rows at once. Drag files or
-folders from Finder onto the list to copy them into the folder on screen. Drag
-a selection out of the list to copy it to Finder.
-
-Nothing is copied while you drag. Finder receives one file promise per row and
-asks for each item only when you let go, so dragging a large folder about costs
-nothing until you mean it.
-
-The list is an `NSTableView` rather than a SwiftUI `Table`, for that one
-reason: only AppKit can hand Finder an `NSFilePromiseProvider` for every
-selected row. See `Termora/UI/RemoteFileTable.swift`. The decisions that each
-promise needs live in `SFTPPromise`, apart from AppKit, so they can be tested.
-
-### How a password reaches OpenSSH
-
-A secret never appears in a command line, in the environment, or in a file.
-Termora sets `SSH_ASKPASS` to `termora-askpass` and `SSH_ASKPASS_REQUIRE` to
-`force`, which sends every question to the helper even when a terminal is
-present. The helper holds no secret: it passes the prompt to Termora over a
-Unix socket in a private directory, together with a random token for that one
-connection attempt, and prints the answer it receives.
-
-`Tools/termora-askpass/main.swift` and
-`Packages/TermoraSSH/Sources/TermoraSSH/AskpassClient.swift` are compiled into
-both the helper and the library, so the tool and the tests can never speak
-different versions of the protocol.
+- **One encrypted file.** The document is sealed with AES-256-GCM. The key
+  comes from your master password through PBKDF2-HMAC-SHA512 with 600,000
+  rounds. Every host name and every secret is inside the sealed part.
+- **Touch ID.** You can unlock with Touch ID. The key then stays sealed by
+  the Secure Enclave of this Mac. The master password still opens the file on
+  any Mac.
+- **Lock.** Select the lock in the title bar, or press ⌃⌘L. In
+  **Settings**, the document can also lock after a time of rest or when the
+  Mac sleeps. A lock closes every session and every tunnel.
+- **No secret on a command line.** Termora gives each password to OpenSSH
+  through `SSH_ASKPASS` and a private socket. A password never goes into a
+  command line, into the environment, or into a file.
+- **Your own OpenSSH.** Termora runs `/usr/bin/ssh`. It does not have its own
+  SSH or SFTP cryptography.
 
 ## Driving Termora from an agent or a script
 
-The application bundle carries a small command-line tool, `termora`. It lets
-a script or an AI agent use your bookmarks and your open connections, and it
-never sees a password: it sends one request to the running application over
-a private Unix socket, and the application does the rest.
+The application includes a small command-line tool, `termora`. A script or
+an AI agent can use it to list your bookmarks and to run commands on your
+servers. The tool never sees a password: it sends one request to the running
+application, and the application does the rest.
 
-A Homebrew install puts the command on your PATH as `termora`. Without
-Homebrew, `./run.sh --install` links it into `/usr/local/bin`, or you can
-call the binary in the bundle directly:
+A Homebrew install puts `termora` on your PATH. Without Homebrew, call
 `/Applications/Termora.app/Contents/MacOS/termora-cli`.
 
 ```bash
@@ -351,27 +245,23 @@ termora status                # every open connection: name, state, tunnels
 termora run web1 -- uptime    # run a command on a bookmark
 ```
 
-`run` opens the connection when it is closed, through the same path as a
-double click: the askpass sheet appears in Termora when OpenSSH must ask,
-and the tool waits. The command then rides the control master, output
-streams through as it arrives, and the far exit code becomes the exit code
-of `termora`. Output is data only, one line per item, so it reads well from
-a script and costs an agent few tokens.
+`run` opens the connection when it is closed, the same as a double-click. If
+OpenSSH needs an answer, the question appears in Termora, and the tool waits.
+The output streams as it arrives, and the exit code of the remote command
+becomes the exit code of `termora`.
 
-The socket answers only while a document is open. Locking the document stops
-the service, so a locked document gives away nothing, not even the names.
-Exit code 2 means the application is not running, the document is locked, or
-the request was refused; the reason is one line on standard error.
+The tool works only while a document is open. When the document is locked,
+the tool gets no data, not even the bookmark names. Exit code 2 means that
+Termora is not running, that the document is locked, or that Termora refused
+the request. The reason is on standard error.
 
 ### Teaching your agent
 
-`termora --help` prints the whole contract: the three verbs, the shape of
-each line of output, the exit codes, and the rule that no password reaches
-the tool. Most agents read help before they use a command they do not know,
-so this alone is often enough.
+`termora --help` prints the whole contract: the three commands, the format of
+the output, the exit codes, and the rule that no password reaches the tool.
+Most agents read the help before they use a command, so this is often enough.
 
-The `Agents/` folder holds the same text in the format that each agent
-reads:
+The `Agents/` folder holds the same text in the format of each agent:
 
 | Agent | How to install it |
 |---|---|
@@ -386,229 +276,50 @@ The shortest form, for a project `AGENTS.md` or `CLAUDE.md`:
 `termora run <bookmark> -- <command…>` runs a command on a saved SSH server; `termora list` names the bookmarks.
 ```
 
-An agent runs `termora` through its shell tool, and most agents block a new
-command until you allow it. In Claude Code the permission is
-`Bash(termora:*)`. Without it the agent reports that the command was
-blocked, which looks like a Termora fault and is not one.
+Most agents ask before they run a new command. In Claude Code the permission
+is `Bash(termora:*)`. Without it, the agent reports that the command was
+blocked. That is not a Termora problem.
 
 ## Importing from Royal TSX
 
-**File, Import from Royal TSX…** reads an `.rtsz` document and adds its folders
-and connections to the document you have open. Nothing already in the document
-is removed.
+**File → Import from Royal TSX…** reads an `.rtsz` document and adds its
+folders and connections to the open document. Nothing in the open document
+is removed. A connection that took its credentials from a folder in Royal TSX
+still takes them from that folder in Termora.
 
-A Royal document is a flat list of typed objects joined by `ParentID`, and the
-importer keeps that shape: a connection that took its credentials from a folder
-in Royal still inherits them in Termora.
+**Passwords.** Royal TSX encrypts saved passwords in a private format.
+Termora does not try to read that format: it asks Royal TSX for each
+password through AppleScript. The first time, macOS asks if Termora can
+control Royal TSX. Answer yes. If Royal TSX is not installed or refuses, the
+import still runs, and the report names each entry whose password you must
+type.
 
-### Passwords
+**The report.** Nothing is dropped without a word. The report lists the
+entries that did not come across and why (for example Telnet, a serial port,
+or an entry in the trash), the passwords that Royal TSX did not give, and the
+settings that Termora does not have.
 
-Royal TSX encrypts `CredentialPassword` and `CredentialPassphrase` with a
-scheme it does not publish. Termora does not guess at it. It asks Royal TSX
-instead: the application has an AppleScript command, `get property value`, that
-returns the decrypted value. macOS asks you once for permission to control
-Royal TSX.
+**Key sequences.** A key sequence written in the entry comes across as it
+is, for example `cd /opt/app{ENTER}`, and becomes the text after connecting.
+A key sequence that was off in Royal TSX stays off, and its text goes into
+the notes. A key sequence that Royal TSX keeps by name only cannot come
+across, and the report names it.
 
-This route is proved against the real document: Royal TSX handed over all 12
-stored secrets, 11 passwords and 1 key passphrase, with none empty.
+**Tasks.** A Royal TSX task that runs before connecting becomes the command
+before connecting. Termora refuses a task that puts `$PASSWORD$` on its
+command line, because every process on the Mac can read a command line. A
+task that runs after disconnecting is reported, not imported.
 
-If Royal TSX is missing, refuses, or is not installed, the import still runs.
-The report then names every entry whose password you must type in.
+**Key or password.** Royal TSX lets an entry have a private key and a
+password at the same time. A Termora connection uses one method, so the
+import asks which one to keep. The default is the password, because you can
+type a key path again, but you cannot recover a lost password.
 
-Royal TSX needs about two seconds after it opens a document before it answers.
-`RoyalTSXBridge.openDocument(path:)` waits inside the script, so the
-application is idle rather than busy while the time passes.
+## Building from source
 
-`RoyalTSXBridge` is bound to the main actor. `NSAppleScript` needs the main
-thread and a run loop: called from anywhere else it does not fail, it never
-returns. Binding the type turns that hang into a compiler error.
+See [Docs/DEVELOPMENT.md](Docs/DEVELOPMENT.md) for the build, the tests, the
+code layout, and the design notes.
 
-The first time you import, macOS asks whether Termora may control Royal TSX.
-Answer yes, or the report will list every password for you to type in.
+## Licence
 
-To exercise the bridge against your own document and the real application:
-
-```sh
-cd Packages/TermoraImport
-TERMORA_TEST_ROYAL_BRIDGE=1 swift test --filter RoyalBridgeLiveTests
-```
-
-That suite starts Royal TSX, so it stays off unless you ask for it.
-
-### What the report tells you
-
-Nothing is dropped without a word. The report lists:
-
-- entries that were not imported, and why, such as Telnet, a serial port, or
-  an entry in the Royal TSX trash;
-- entries whose password Royal TSX did not hand over;
-- settings Termora does not hold.
-
-### Key sequences and tasks
-
-Royal writes the text of a key sequence into the entry itself, so it comes
-across as it stands, in the same form: `cd /opt/maho/app{ENTER}`. Termora types
-it into the session once the prompt appears. `{ENTER}`, `{TAB}`, `{ESC}`, the
-arrow names, and `{DELAY:500}` all work, and a name nobody knows is typed as
-written rather than swallowed.
-
-A sequence that Royal had switched off stays off, and its text goes into the
-notes so nothing is lost.
-
-A **task**, and a key sequence stored by name, cannot come across. Royal keeps
-those in a different document, and only the name reaches the connections file.
-The report names each one and says why.
-
-### One entry, one method
-
-Royal lets an entry carry a private key **and** a password at once. A Termora
-connection uses one method, so the import sheet asks which one to keep. Keeping
-the password is the default, because a key path is not a secret and you can
-type it in again, while a password cannot be recovered. Either way, the report
-names every entry this touched and the value that was left out.
-
-## Known toolchain problem
-
-Swift 6.3.3 crashes while generating code when a method reference is passed
-straight to a `Binding` setter, as in `set: change`. Write the closure out:
-`set: { newValue in change(to: newValue) }`. See `AuthenticationEditor` in
-`Termora/UI/InspectorView.swift`.
-
-## Two traps worth remembering
-
-**A UI test target must not link a package that the application links.**
-Adding `TermoraSSH` to `TermoraUITests` stopped the application under test
-from opening any window at all, with no error anywhere. The test bundle only
-needs the packages it imports itself.
-
-**OpenSSH ends its lines with a carriage return and a line feed, and Swift
-counts that pair as one Character.** `split(separator: "\n")` therefore finds
-nothing and returns the whole log as one line. Use
-`split(whereSeparator: \.isNewline)`. See `CommandResult.lines(of:)`.
-
-## Status
-
-- **Phase 1, done.** One Ghostty pane running your login shell.
-- **Phase 2, done.** The object tree, folder inheritance, the encrypted
-  document, the sidebar, and the inspector.
-- **Phase 3, done.** The control master, `termora-askpass`, terminal tabs, and
-  splits. Proved against a real OpenSSH server that the tests start themselves.
-- **Phase 4, done.** The Royal TSX reader, the AppleScript bridge for saved
-  passwords, and the import report.
-- **Phase 5, done.** Tunnels in the inspector, with live control on an open
-  connection. Local, remote, and SOCKS are each proved against a real server.
-- **Phase 6, done.** The SFTP version 3 client and the file browser, proved
-  against a real SFTP server and over a real SSH connection.
-- **Phase 7, done.** Local shells, and ⌘T for a new tab like the one in
-  front.
-
-### Not done yet
-
-- Resuming a transfer that was interrupted.
-
-### Tasks from Royal TSX
-
-Royal TSX calls a local command a task. A connections document never holds the
-commands of a task: it holds only a name or an identifier. The commands live in
-`~/Library/Application Support/Royal TSX/UserPreferences.config`, which is the
-same `RTSZDocument` XML, so `RoyalDocumentParser` reads it as it stands.
-`RoyalTaskLibrary` picks the `RoyalCommandTask` objects out of it, and the
-importer joins them to `PreConnectTaskName` and `PreConnectTaskId`.
-
-A task becomes `NodeSettings.beforeConnect`. It is inheritable, so a task set on
-a Royal folder still reaches every connection in that folder. Termora runs it
-before it starts the control master, and shows what it prints.
-
-Two rules the importer keeps:
-
-- A task that puts `$PASSWORD$` on its command line is refused. A command line
-  is readable by every process on this Mac.
-- Termora does not call a shell. `LocalCommandRunner.arguments(from:)` splits
-  the argument line itself, so a mark such as `;` in a host name stays one word.
-
-A task run after disconnecting is reported, not run. Termora has no such step.
-
-### The terminal theme
-
-libghostty reads your own `config` file, but it cannot resolve a
-`theme = <name>` line: Ghostty loads theme files from its own application
-bundle, and Termora is a different bundle. `GhosttyConfigFile.themeChoice(in:)`
-reads that line, and `GhosttyEnvironment.userTheme()` finds the theme in the
-catalogue that ships with `libghostty-spm`. Both the single form and the
-`light:One,dark:Two` form work.
-
-Do not pass an empty `TerminalTheme()`: the package then puts its own colours
-over everything, and a pane looks nothing like your Ghostty window.
-
-### The application icon
-
-The icon is the Tabler `terminal` icon, drawn on the macOS rounded square.
-`Tools/make-app-icon.swift` draws it with CoreGraphics and writes every size:
-
-    swift Tools/make-app-icon.swift Termora/Resources/Assets.xcassets/AppIcon.appiconset
-
-ImageMagick cannot render the source SVG: its built-in renderer drops strokes
-and gradients.
-
-### Touch ID without a signing identity
-
-A Keychain item guarded by Touch ID needs the `keychain-access-groups`
-entitlement. macOS only accepts that entitlement from a build signed with a
-real team identity. With an ad-hoc signature every such call returns
-`errSecMissingEntitlement` (-34018), and signing the entitlement anyway makes
-macOS end the process at launch (exit 137). Both were measured, not guessed.
-
-`VaultKeyStore` therefore does not use the Keychain. It asks the Secure
-Enclave, which has no such rule, for a key that only Touch ID can use:
-
-1. The Secure Enclave makes a private key guarded by `.biometryCurrentSet`.
-   Its `dataRepresentation` is a sealed record that is useless anywhere else,
-   so Termora keeps it in a plain file.
-2. Termora makes a second key pair, agrees a shared secret with the Secure
-   Enclave public key through ECDH, and drops its own private half.
-3. The document key is sealed with a key derived from that secret (HKDF over
-   the document salt).
-
-Only the Secure Enclave can agree the secret again, and it asks for Touch ID
-first. Records live in `~/Library/Application Support/Termora/TouchID`, one
-file per document and salt, mode 0600.
-
-Remembering a key reports its failure to the person. A quiet failure looks
-exactly like success until the next launch asks for the password again.
-
-### Never take a terminal tab out of the view tree
-
-The tab area draws **every** tab in a `ZStack` and makes the hidden ones clear
-with `opacity(0)`. The obvious form is wrong:
-
-    if let tab = sessions.selectedTab { TabContent(tab: tab).id(tab.id) }   // WRONG
-
-That takes the previous tab out of the view tree, which ends its
-`TerminalSurfaceView`. libghostty cannot give the same terminal state a second
-surface, so the tab stays blank for ever, even after you return to it. Every
-tab you switch away from is lost, while the tab bar still reports it as ready.
-
-`SessionsController.updateVisibility()` sets `isSurfaceVisible` so libghostty
-stops drawing a tab you cannot see. That is the right way to save the work:
-stop the drawing, keep the view.
-
-### A task runs with the PATH of a login shell
-
-A program started from the Dock inherits the small `PATH` that `launchd` sets,
-usually `/usr/bin:/bin:/usr/sbin:/sbin`. A Royal task expects a terminal's
-`PATH`. `LocalCommandRunner.loginPath` asks `$SHELL -lc 'printf %s "$PATH"'`
-once, with a fixed command that carries no value from any document.
-
-`programPath(for:searching:)` then finds a program named without a path, the
-way a shell does. Royal's own `Ping` task names `ping`, which lives in `/sbin`
-on a Mac, so without the search it would fail too.
-
-### Termora uses the upstream libghostty-spm
-
-Termora depends on `Lakr233/libghostty-spm`, pinned to an exact version in
-`project.yml`. It is the only remote dependency, and Termora always pins the
-newest upstream release. It once carried a vendored copy with three fixes; all
-three are upstream since 1.4.5 — the wakeup observers,
-`TerminalViewState.isSurfaceVisible`, and programmatic key presses through
-`ghostty_surface_key`. Before pinning a newer version, check that the three
-are still there: each guards against a bug Termora hit in real use.
+MIT. See [LICENSE](LICENSE).

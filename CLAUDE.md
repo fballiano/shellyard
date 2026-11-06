@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Termora is a native macOS SSH connection manager (SwiftUI, Swift 6, strict
 concurrency `complete`, macOS 26+). It embeds the Ghostty terminal engine
-through libghostty. The README.md is detailed and current; read it for the
-document format, the SSH control-master design, and the import pipeline.
+through libghostty. README.md is the user guide. Docs/DEVELOPMENT.md is
+detailed and current; read it for the document format, the SSH
+control-master design, the import pipeline, and the release process.
 
 ## Commands
 
