@@ -220,6 +220,84 @@ check_p12() {
   return $ok
 }
 
+# A private folder for the .p12, removed when the wizard ends, however it ends.
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+
+# export_developer_id FILE PASSWORD writes the team's Developer ID identity,
+# and no other, to FILE. `security export` takes every identity of the
+# keychain, personal ones included, so a small Swift program exports this one
+# by the SHA-1 hash of its certificate. The password goes in on standard
+# input, never on a command line.
+export_developer_id() {
+  local file="$1" password="$2" hash program="$WORK_DIR/export.swift"
+  hash=$(security find-identity -v -p codesigning \
+           | grep "Developer ID Application: .*($TEAM_ID)" | head -n1 | awk '{print $2}')
+  [[ -n "$hash" ]] || return 1
+  cat > "$program" <<'SWIFT'
+// Exports one code signing identity, by the SHA-1 hash of its certificate,
+// as a .p12. `security export` can only take every identity of a keychain.
+//
+//   export.swift --list               prints "<sha1> <name>" for each identity
+//   export.swift <sha1> <file.p12>    reads the password on standard input
+import CryptoKit
+import Foundation
+import Security
+
+func identities() -> [(hash: String, name: String, identity: SecIdentity)] {
+    let query: [CFString: Any] = [
+        kSecClass: kSecClassIdentity,
+        kSecReturnRef: true,
+        kSecMatchLimit: kSecMatchLimitAll,
+    ]
+    var result: CFTypeRef?
+    guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+          let found = result as? [SecIdentity] else { return [] }
+    return found.compactMap { identity in
+        var certificate: SecCertificate?
+        guard SecIdentityCopyCertificate(identity, &certificate) == errSecSuccess,
+              let certificate else { return nil }
+        let data = SecCertificateCopyData(certificate) as Data
+        let hash = Insecure.SHA1.hash(data: data).map { String(format: "%02X", $0) }.joined()
+        let name = SecCertificateCopySubjectSummary(certificate) as String? ?? "?"
+        return (hash, name, identity)
+    }
+}
+
+let arguments = CommandLine.arguments
+if arguments.count == 2, arguments[1] == "--list" {
+    for item in identities() { print("\(item.hash) \(item.name)") }
+    exit(0)
+}
+guard arguments.count == 3 else {
+    FileHandle.standardError.write(Data("usage: export.swift --list | <sha1> <file.p12>\n".utf8))
+    exit(2)
+}
+guard let match = identities().first(where: { $0.hash == arguments[1].uppercased() }) else {
+    FileHandle.standardError.write(Data("No identity with that hash.\n".utf8))
+    exit(1)
+}
+guard let password = readLine(strippingNewline: true), !password.isEmpty else {
+    FileHandle.standardError.write(Data("No password on standard input.\n".utf8))
+    exit(1)
+}
+var parameters = SecItemImportExportKeyParameters()
+parameters.version = UInt32(SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION)
+parameters.passphrase = Unmanaged.passUnretained(password as CFString)
+var exported: CFData?
+let status = SecItemExport(match.identity, .formatPKCS12, [], &parameters, &exported)
+guard status == errSecSuccess, let exported else {
+    let message = SecCopyErrorMessageString(status, nil) as String? ?? "\(status)"
+    FileHandle.standardError.write(Data("The export failed: \(message)\n".utf8))
+    exit(1)
+}
+let url = URL(fileURLWithPath: arguments[2])
+FileManager.default.createFile(atPath: url.path, contents: exported as Data,
+                               attributes: [.posixPermissions: 0o600])
+SWIFT
+  printf '%s\n' "$password" | xcrun swift "$program" "$hash" "$file"
+}
+
 # True when this Mac's keychain holds the Developer ID certificate of the team.
 # grep reads a string, not a pipe: with pipefail, `security … | grep -q` can
 # fail when grep stops reading early.
@@ -304,25 +382,27 @@ pause
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Export the certificate as a .p12"
-say "CI needs the certificate with its private key, in one .p12 file."
-step "Keychain Access opens. Select the login keychain, then My Certificates."
-step "Right-click \"Developer ID Application: … ($TEAM_ID)\" → Export…"
-step "Format: Personal Information Exchange (.p12). Save it outside the repo."
-step "Choose a password for the file. You type it here next."
-open -a "Keychain Access" >/dev/null 2>&1 \
-  || open "/System/Library/CoreServices/Applications/Keychain Access.app" >/dev/null 2>&1 \
-  || warn "Could not open Keychain Access. Open it with Spotlight."
-while true; do
-  ask P12_PATH "Path of the .p12 file:"
-  P12_PATH="${P12_PATH/#\~/$HOME}"
-  [[ -f "$P12_PATH" ]] || { warn "No file at $P12_PATH"; continue; }
-  ask_secret P12_PASSWORD "Password of the .p12:"
-  if check_p12 "$P12_PATH" "$P12_PASSWORD"; then
-    note "The file opens with that password and holds the Developer ID identity."
-    break
-  fi
-  warn "That file and password do not give a Developer ID Application identity. Try again."
-done
+say "CI needs the certificate with its private key, in one .p12 file. The"
+say "wizard exports that one identity, and no other, into a private folder"
+say "that it removes when it ends."
+note "macOS asks once to allow the export of the key: type your login password."
+ask_secret P12_PASSWORD "Choose a password for the .p12 (CI uses it):"
+P12_PATH="$WORK_DIR/developer-id.p12"
+if export_developer_id "$P12_PATH" "$P12_PASSWORD" && check_p12 "$P12_PATH" "$P12_PASSWORD"; then
+  note "Exported. The file holds the Developer ID identity and nothing else."
+else
+  warn "The export did not work. Export it by hand instead:"
+  step "Keychain Access → login → My Certificates → select the Developer ID"
+  step "certificate → File → Export Items… → Personal Information Exchange (.p12)."
+  while true; do
+    ask P12_PATH "Path of the .p12 file:"
+    P12_PATH="${P12_PATH/#\~/$HOME}"
+    [[ -f "$P12_PATH" ]] || { warn "No file at $P12_PATH"; continue; }
+    ask_secret P12_PASSWORD "Password of the .p12:"
+    check_p12 "$P12_PATH" "$P12_PASSWORD" && break
+    warn "That file and password do not give a Developer ID Application identity."
+  done
+fi
 pause
 
 # ── 5 ─────────────────────────────────────────────────────────────────────
@@ -384,10 +464,14 @@ if confirm "Start the dry run now?"; then
   fi
 fi
 say ""
-say "The certificate is in your keychain, and now in GitHub, so the .p12 is a"
-say "spare copy of your private key."
-if confirm "Delete $P12_PATH?"; then
-  rm -f "$P12_PATH" && note "Deleted."
+if [[ "$P12_PATH" == "$WORK_DIR"/* ]]; then
+  note "The .p12 goes with the private folder when the wizard ends."
+else
+  say "The certificate is in your keychain, and now in GitHub, so the .p12 is a"
+  say "spare copy of your private key."
+  if confirm "Delete $P12_PATH?"; then
+    rm -f "$P12_PATH" && note "Deleted."
+  fi
 fi
 note "Keep the .p8 somewhere safe and out of the repo: Apple will not give it again."
 pause "Press Enter to finish"
