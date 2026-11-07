@@ -43,6 +43,9 @@ final class AgentGateway: ObservableObject {
             }
             try service.start()
             self.service = service
+        } catch AgentServiceError.alreadyServed {
+            // Another copy of Termora answers the tool, and it keeps doing
+            // so. This copy (a UI test, a debug build) works without it.
         } catch {
             // The window works without the socket, so say so instead of
             // standing in the way of the unlock.

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Testing
 @testable import TermoraModel
@@ -96,6 +97,79 @@ func agentNoResponderRefuses() async throws {
         AgentClient.send(AgentRequest(command: .list), socketPath: path)
     }.value
     #expect(reply?.ok == false)
+}
+
+@Test("A second instance does not take the socket from a live one")
+func agentSecondInstanceLeavesLiveSocket() async throws {
+    // A second copy of the app (a UI test, a debug build) once took the
+    // socket from the app in use, and `termora` found nobody there.
+    let path = temporarySocketPath()
+    let first = try AgentService(socketPath: path)
+    first.responder = { _ in AgentReply(ok: true, bookmarks: []) }
+    try first.start()
+    defer { first.stop() }
+
+    let second = try AgentService(socketPath: path)
+    second.responder = { _ in .refused("second") }
+    #expect(throws: AgentServiceError.self) { try second.start() }
+    second.stop()
+
+    let reply = await Task.detached {
+        AgentClient.send(AgentRequest(command: .list), socketPath: path)
+    }.value
+    #expect(reply?.ok == true)
+}
+
+@Test("A socket file left behind by a crash does not block the start")
+func agentReplacesStaleSocket() async throws {
+    let path = temporarySocketPath()
+    // Bind, then close without removing the file, as a killed process does.
+    try FileManager.default.createDirectory(
+        atPath: (path as NSString).deletingLastPathComponent,
+        withIntermediateDirectories: true
+    )
+    let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
+    var address = sockaddr_un()
+    address.sun_family = sa_family_t(AF_UNIX)
+    withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: Array(path.utf8)) }
+    let bound = withUnsafePointer(to: &address) { pointer in
+        pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+            bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+        }
+    }
+    close(descriptor)
+    #expect(bound == 0)
+    #expect(FileManager.default.fileExists(atPath: path))
+
+    let service = try AgentService(socketPath: path)
+    service.responder = { _ in AgentReply(ok: true) }
+    try service.start()
+    defer { service.stop() }
+
+    let reply = await Task.detached {
+        AgentClient.send(AgentRequest(command: .list), socketPath: path)
+    }.value
+    #expect(reply?.ok == true)
+}
+
+@Test("A stopping service leaves a socket file that is not its own")
+func agentStopLeavesOtherSocket() async throws {
+    let path = temporarySocketPath()
+    let old = try AgentService(socketPath: path)
+    try old.start()
+    // Someone removed the file, and a new service now owns the path.
+    unlink(path)
+    let current = try AgentService(socketPath: path)
+    current.responder = { _ in AgentReply(ok: true) }
+    try current.start()
+    defer { current.stop() }
+
+    old.stop()
+
+    let reply = await Task.detached {
+        AgentClient.send(AgentRequest(command: .list), socketPath: path)
+    }.value
+    #expect(reply?.ok == true)
 }
 
 @Test("The default socket path fits a Unix socket address")
