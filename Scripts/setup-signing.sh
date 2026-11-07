@@ -198,12 +198,17 @@ finish() {
 # the whole file before the first prompt, so an edit mid-run can't break it.
 # ──────────────────────────────────────────────────────────────────────────
 
-# Termora release signing. Sets up what .github/workflows/release.yml needs to
-# sign with Developer ID and to notarize. Nothing is written to disk: every
-# value goes straight into a GitHub secret, as Termora never keeps a secret in
-# a file.
+# Release signing. Sets up what .github/workflows/release.yml needs to sign
+# with Developer ID and to notarize, in one or more repositories:
+#
+#   ./Scripts/setup-signing.sh                         fballiano/termora
+#   ./Scripts/setup-signing.sh owner/app1 owner/app2   those repositories
+#
+# Nothing is written to disk: every value goes straight into GitHub secrets,
+# as Termora never keeps a secret in a file. GitHub never gives a secret back,
+# so another repository needs this run again, not a copy.
 TEAM_ID="H95XQBELRP"
-export GH_REPO="fballiano/termora"
+REPOS=()
 
 # A keychain of its own imports the .p12 exactly as CI does, then goes.
 check_p12() {
@@ -307,6 +312,9 @@ has_developer_id() {
 
 run_wizard() {
 
+REPOS=("$@")
+(( ${#REPOS[@]} )) || REPOS=("fballiano/termora")
+
 # Every stage waits for Enter. Without a terminal, `read` gets end-of-input
 # at once and a wait loop spins for ever, so stop here instead.
 if [[ ! -t 0 ]]; then
@@ -316,22 +324,29 @@ fi
 
 TOTAL_STAGES=7
 
-banner "Termora: sign and notarize the releases"
+banner "Sign and notarize the releases"
 
 # ── 1 ─────────────────────────────────────────────────────────────────────
 stage "Before you start"
-say "This sets up what the release workflow needs to sign Termora with your"
+say "This sets up what a release workflow needs to sign an app with your"
 say "Developer ID and to have Apple notarize it."
 note "Nothing is saved on disk. Each value goes straight into a GitHub secret,"
 note "so a second run asks for everything again."
 say ""
 step "Only the Account Holder of team $TEAM_ID can make a Developer ID certificate."
-step "gh must be logged in, with access to $GH_REPO."
+step "gh must be logged in, with admin access to: ${REPOS[*]}"
 until gh auth status >/dev/null 2>&1; do
   warn "gh is not logged in. In another terminal, run: gh auth login"
   pause "Press Enter when gh is logged in"
 done
 note "gh is logged in."
+for repo in "${REPOS[@]}"; do
+  if ! gh repo view "$repo" >/dev/null 2>&1; then
+    warn "gh cannot see $repo. Check the name, then run the wizard again."
+    exit 1
+  fi
+done
+note "gh can see every repository."
 pause
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
@@ -409,7 +424,8 @@ pause
 stage "App Store Connect API key, for notarization"
 open_url "https://appstoreconnect.apple.com/access/integrations/api"
 step "Open the Team Keys tab. The first time, request access and accept."
-step "Click + (Generate API Key). Name: Termora notarization. Access: Developer."
+step "Click + (Generate API Key). Name: Notarization. Access: Developer."
+note "Have a key already, and its .p8? Use it: skip the +, and copy its Key ID."
 step "Copy the Issuer ID, above the list of keys."
 ask NOTARY_ISSUER_ID "Issuer ID:"
 step "Copy the Key ID of the new key, in its row."
@@ -434,17 +450,26 @@ pause
 
 # ── 6 ─────────────────────────────────────────────────────────────────────
 stage "GitHub variable and secrets"
-say "These go to $GH_REPO and replace any value already there:"
+say "These go to each repository and replace any value already there:"
+for repo in "${REPOS[@]}"; do note "  $repo"; done
 note "variable APPLE_TEAM_ID = $TEAM_ID"
 note "secrets  DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD,"
 note "         NOTARY_KEY_P8_BASE64, NOTARY_KEY_ID, NOTARY_ISSUER_ID"
 if confirm "Write them now?"; then
-  set_var APPLE_TEAM_ID "$TEAM_ID"
-  set_secret DEVELOPER_ID_P12_BASE64 "$(base64 -i "$P12_PATH" | tr -d '\n')"
-  set_secret DEVELOPER_ID_P12_PASSWORD "$P12_PASSWORD"
-  set_secret NOTARY_KEY_P8_BASE64 "$(base64 -i "$P8_PATH" | tr -d '\n')"
-  set_secret NOTARY_KEY_ID "$NOTARY_KEY_ID"
-  set_secret NOTARY_ISSUER_ID "$NOTARY_ISSUER_ID"
+  P12_BASE64="$(base64 -i "$P12_PATH" | tr -d '\n')"
+  P8_BASE64="$(base64 -i "$P8_PATH" | tr -d '\n')"
+  for repo in "${REPOS[@]}"; do
+    say ""
+    say "$repo"
+    export GH_REPO="$repo"
+    set_var APPLE_TEAM_ID "$TEAM_ID"
+    set_secret DEVELOPER_ID_P12_BASE64 "$P12_BASE64"
+    set_secret DEVELOPER_ID_P12_PASSWORD "$P12_PASSWORD"
+    set_secret NOTARY_KEY_P8_BASE64 "$P8_BASE64"
+    set_secret NOTARY_KEY_ID "$NOTARY_KEY_ID"
+    set_secret NOTARY_ISSUER_ID "$NOTARY_ISSUER_ID"
+  done
+  unset GH_REPO
 else
   SKIPPED+=("the GitHub variable and the five secrets")
 fi
@@ -454,15 +479,19 @@ pause
 stage "Dry run, and tidy up"
 say "A dry run builds, signs, and notarizes, and publishes nothing. The zip"
 say "stays on the run as an artifact."
-if confirm "Start the dry run now?"; then
-  if gh workflow run release.yml --ref main >/dev/null 2>&1; then
-    note "Started. Follow it with: gh run watch"
-    open_url "https://github.com/$GH_REPO/actions/workflows/release.yml"
-  else
-    warn "gh could not start it. Is the new release.yml pushed to main?"
-    SKIPPED+=("the dry run: gh workflow run release.yml --ref main")
+note "Only a release.yml that signs and notarizes has a dry run. Start one"
+note "only for a repository whose workflow already does that."
+for repo in "${REPOS[@]}"; do
+  if confirm "Start the dry run of $repo now?"; then
+    if gh workflow run release.yml --ref main -R "$repo" >/dev/null 2>&1; then
+      note "Started. Follow it with: gh run watch -R $repo"
+      open_url "https://github.com/$repo/actions/workflows/release.yml"
+    else
+      warn "gh could not start it. Does its release.yml allow a manual run?"
+      SKIPPED+=("the dry run of $repo")
+    fi
   fi
-fi
+done
 say ""
 if [[ "$P12_PATH" == "$WORK_DIR"/* ]]; then
   note "The .p12 goes with the private folder when the wizard ends."
