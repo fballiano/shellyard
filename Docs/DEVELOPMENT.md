@@ -131,8 +131,8 @@ it, staples the ticket, publishes a GitHub release with the zip, and points
 new zip. It pushes to the tap with the deploy key in the secret
 `TAP_DEPLOY_KEY`, which can write to that repository only.
 
-`Casks/termora.rb` in this repository is the cask of the old tap. It is
-frozen and deprecated. The workflow does not change it.
+Until 1.2.0, this repository was its own tap, `fballiano/termora`. It has no
+cask now. A user of the old tap moves with the commands in the README.
 
 ### Signing and notarization
 

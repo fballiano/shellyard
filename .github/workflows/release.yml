@@ -8,8 +8,8 @@ name: Release
 #   brew trust --tap fballiano/tap
 #   brew install --cask shellyard
 #
-# Casks/termora.rb in this repository is the cask of the old tap. It is
-# frozen and deprecated, and this workflow does not change it.
+# Until 1.2.0, this repository was its own tap, fballiano/termora. It has no
+# cask now.
 #
 # Run it by hand (Actions -> Release -> Run workflow) for a dry run: it
 # signs and notarizes, keeps the zip as a workflow artifact, and publishes
