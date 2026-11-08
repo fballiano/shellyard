@@ -144,6 +144,7 @@ private struct TabButton: View {
             RoundedRectangle(cornerRadius: 5)
                 .strokeBorder(isSelected ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.clear))
         )
+        .overlay { attentionGlow }
         .contentShape(Rectangle())
         .onTapGesture { sessions.selectedTabID = tab.id }
         .onHover { isHovering = $0 }
@@ -155,6 +156,38 @@ private struct TabButton: View {
         .accessibilityIdentifier("tab-\(tab.name)")
         // The chosen tab says so, for VoiceOver and for the tests.
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityValue(attentionDescription ?? "")
+    }
+
+    /// A coloured edge with a soft glow, on a hidden tab whose pane rang the
+    /// bell or ended a long command. It is drawn after the clip, so the glow
+    /// can reach past the edge of the tab.
+    @ViewBuilder
+    private var attentionGlow: some View {
+        if let color = attentionColor {
+            RoundedRectangle(cornerRadius: 5)
+                .strokeBorder(color, lineWidth: 1.5)
+                .shadow(color: color.opacity(0.8), radius: 3)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var attentionColor: Color? {
+        switch tab.attention {
+        case nil: nil
+        case .neutral: .accentColor
+        case .success: .green
+        case .failure: .red
+        }
+    }
+
+    private var attentionDescription: String? {
+        switch tab.attention {
+        case nil: nil
+        case .neutral: "Needs attention"
+        case .success: "Command finished"
+        case .failure: "Command failed"
+        }
     }
 
     private var closeMark: some View {

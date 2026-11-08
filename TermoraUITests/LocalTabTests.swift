@@ -151,6 +151,43 @@ final class LocalTabTests: XCTestCase {
         app.typeKey(.escape, modifierFlags: [])
     }
 
+    /// A bell in a hidden tab marks that tab. Choosing the tab removes
+    /// the mark.
+    func testBellMarksHiddenTab() throws {
+        let (app, main) = unlockedWindow()
+
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(localTabs(in: main).firstMatch.waitForExistence(timeout: 5))
+        sleep(3)
+        app.typeText("sleep 2; printf '\\a'\r")
+        app.typeKey("t", modifierFlags: [.command, .shift])
+
+        let first = localTabs(in: main).element(boundBy: 0)
+        XCTAssertTrue(waitUntil(timeout: 10) { first.value as? String == "Needs attention" },
+                      "The bell did not mark the hidden tab.")
+
+        app.typeKey("1", modifierFlags: [.command])
+        XCTAssertTrue(waitUntil { (first.value as? String ?? "").isEmpty },
+                      "The mark stayed on the tab in view.")
+    }
+
+    /// A long command that fails in a hidden tab marks that tab red. This
+    /// needs a shell with shell integration (OSC 133), as the local
+    /// shell has.
+    func testFailedLongCommandMarksHiddenTab() throws {
+        let (app, main) = unlockedWindow()
+
+        app.typeKey("t", modifierFlags: [.command, .shift])
+        XCTAssertTrue(localTabs(in: main).firstMatch.waitForExistence(timeout: 5))
+        sleep(3)
+        app.typeText("sleep 6; false\r")
+        app.typeKey("t", modifierFlags: [.command, .shift])
+
+        let first = localTabs(in: main).element(boundBy: 0)
+        XCTAssertTrue(waitUntil(timeout: 15) { first.value as? String == "Command failed" },
+                      "The failed command did not mark the hidden tab.")
+    }
+
     // MARK: - Helpers
 
     private func unlockedWindow() -> (XCUIApplication, XCUIElement) {
@@ -172,9 +209,11 @@ final class LocalTabTests: XCTestCase {
         main.descendants(matching: .any).matching(identifier: "tab-Local")
     }
 
-    private func waitUntil(_ condition: @escaping () -> Bool) -> Bool {
+    private func waitUntil(
+        timeout: TimeInterval = 5, _ condition: @escaping () -> Bool
+    ) -> Bool {
         let predicate = NSPredicate { _, _ in condition() }
         let reached = expectation(for: predicate, evaluatedWith: nil)
-        return XCTWaiter.wait(for: [reached], timeout: 5) == .completed
+        return XCTWaiter.wait(for: [reached], timeout: timeout) == .completed
     }
 }

@@ -3,6 +3,7 @@
 //  Termora
 //
 
+import Combine
 import Foundation
 import GhosttyTerminal
 
@@ -38,6 +39,15 @@ struct TerminalLaunch: Equatable, Sendable {
     }
 }
 
+/// Something in a pane that can need your attention.
+enum PaneEvent: Equatable {
+    /// The program sent the bell character (`\a`).
+    case bell
+    /// A command ended. Only a shell with shell integration (OSC 133) tells
+    /// this. `exitCode` is `nil` when the shell does not send it.
+    case commandFinished(exitCode: Int?)
+}
+
 /// One terminal pane.
 ///
 /// This type is the only boundary between Termora and libghostty. Keep every
@@ -65,6 +75,17 @@ final class TerminalSession: Identifiable, ObservableObject {
     /// child process was still running, so the owner can ask for confirmation.
     var onRequestClose: ((TerminalSession, _ processAlive: Bool) -> Void)?
 
+    /// The owner sets this to hear about a bell, or about a long command
+    /// that ended.
+    var onEvent: ((TerminalSession, PaneEvent) -> Void)?
+
+    /// A command shorter than this does not count. Without a limit, every
+    /// `ls` would report. Ghostty's own `notify-on-command-finish-after`
+    /// has the same default.
+    static let longCommand: Duration = .seconds(5)
+
+    private var subscriptions: Set<AnyCancellable> = []
+
     init(id: UUID = UUID(), launch: TerminalLaunch) {
         self.id = id
         self.launch = launch
@@ -88,6 +109,25 @@ final class TerminalSession: Identifiable, ObservableObject {
                 self?.handleClose(processAlive: processAlive)
             }
         }
+        // `@Published` sends the new value before it is stored. The state
+        // sets the exit code before the duration, so the exit code is
+        // already in place when the duration arrives.
+        state.$bellCount
+            .dropFirst()
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.report(.bell) }
+            }
+            .store(in: &subscriptions)
+        state.$lastCommandDurationNanos
+            .dropFirst()
+            .compactMap { $0 }
+            .sink { [weak self] nanos in
+                MainActor.assumeIsolated {
+                    guard let self, Duration.nanoseconds(nanos) >= Self.longCommand else { return }
+                    self.report(.commandFinished(exitCode: self.state.lastCommandExitCode))
+                }
+            }
+            .store(in: &subscriptions)
     }
 
     /// The title to show on a tab. The program's own title wins when it sets one.
@@ -158,6 +198,10 @@ final class TerminalSession: Identifiable, ObservableObject {
     @discardableResult
     func press(_ key: TerminalKey) -> Bool {
         state.sendKey(key)
+    }
+
+    private func report(_ event: PaneEvent) {
+        onEvent?(self, event)
     }
 
     private func handleClose(processAlive: Bool) {

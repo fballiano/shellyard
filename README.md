@@ -173,6 +173,13 @@ same folder. With no tab open, it is a local shell in your home folder.
 ⇧⌘T, or **Local Shell** in the sidebar, always opens a local shell. A local
 tab shows the name of its current folder, and a split opens in that folder.
 
+A tab you cannot see glows when it needs a look. It glows in the accent
+colour when a program rings the bell, for example after
+`make; printf '\a'`. It glows green when a command of five seconds or more
+ends well, and red when that command fails. The green and red marks need a
+shell that reports its commands (OSC 133): a local shell does, and so does
+fish 4 or later on a server. The glow goes when you open the tab.
+
 ### Tunnels
 
 Edit the tunnels of a connection in its editor. While the connection is

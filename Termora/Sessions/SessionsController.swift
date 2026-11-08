@@ -52,6 +52,20 @@ final class TerminalTab: Identifiable, ObservableObject {
     /// Reconnect or Try Again is at work.
     @Published var isReconnecting = false
 
+    /// Why a tab you cannot see asks for a look.
+    enum Attention: Equatable {
+        /// A bell, or a command that ended with no exit code.
+        case neutral
+        /// A command ended with exit code 0.
+        case success
+        /// A command ended with any other exit code.
+        case failure
+    }
+
+    /// Set when a hidden pane rings the bell or ends a long command. It goes
+    /// when the tab comes into view. See `SessionsController.updateVisibility`.
+    @Published var attention: Attention?
+
     init(connectionID: UUID, connectionName: String, colorTag: ColorTag) {
         self.connectionID = connectionID
         name = connectionName
@@ -814,7 +828,25 @@ final class SessionsController: ObservableObject {
                 close(paneID: session.id)
             }
         }
+        session.onEvent = { [weak self] session, event in
+            self?.paneEvent(event, in: session)
+        }
         return session
+    }
+
+    /// Marks the tab of a pane that needs a look. A tab in view needs no
+    /// mark. The last event wins.
+    private func paneEvent(_ event: PaneEvent, in session: TerminalSession) {
+        guard let tab = tab(containing: session.id), tab.id != selectedTabID else { return }
+        tab.attention = switch event {
+        case .bell: .neutral
+        case let .commandFinished(exitCode):
+            switch exitCode {
+            case nil: .neutral
+            case 0: .success
+            default: .failure
+            }
+        }
     }
 
     // MARK: - Panes and tabs
@@ -926,11 +958,12 @@ final class SessionsController: ObservableObject {
     }
 
     /// Stops drawing panes in tabs you cannot see. The grid, the scrollback,
-    /// and the process all stay alive.
+    /// and the process all stay alive. The tab in view loses its mark.
     func updateVisibility() {
         for tab in tabs {
             let isVisible = tab.id == selectedTabID
             for pane in tab.panes { pane.setVisible(isVisible) }
+            if isVisible, tab.attention != nil { tab.attention = nil }
         }
     }
 
