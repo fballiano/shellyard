@@ -158,29 +158,44 @@ private struct FilterField: View {
 ///
 /// A row of its own above the filter, with a divider under it: it is not a
 /// bookmark, so one click opens it, and there is nothing to select or edit.
+///
+/// The row is marked while a local shell tab is in front and no bookmark is
+/// chosen, the same way a bookmark row is marked for its own tab.
 private struct LocalShellButton: View {
+    @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var sessions: SessionsController
     @State private var isHovering = false
+
+    private var isMarked: Bool {
+        sessions.selectedTab?.isLocal == true && store.selection == nil
+    }
+
+    private var rowFill: AnyShapeStyle {
+        if isMarked { return AnyShapeStyle(Color.accentColor) }
+        if isHovering { return AnyShapeStyle(.quaternary) }
+        return AnyShapeStyle(Color.clear)
+    }
 
     var body: some View {
         Button { sessions.openLocal() } label: {
             HStack(spacing: 6) {
                 Image(systemName: "laptopcomputer")
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(isMarked ? AnyShapeStyle(Color.white) : AnyShapeStyle(.tint))
                     .frame(width: 18)
                 Text("Local Shell")
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Text("⇧⌘T")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isMarked ? AnyShapeStyle(Color.white.opacity(0.8))
+                                              : AnyShapeStyle(.secondary))
             }
+            .foregroundStyle(isMarked ? Color.white : Color.primary)
             .padding(.horizontal, 8)
             .frame(height: 28)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovering ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear))
+                RoundedRectangle(cornerRadius: 6).fill(rowFill)
             )
             .contentShape(Rectangle())
         }

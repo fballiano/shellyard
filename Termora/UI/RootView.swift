@@ -198,12 +198,14 @@ struct MainWindowView: View {
         // The sidebar marks the bookmark of the tab in front. Without this,
         // the mark stays on the last row clicked, and it looks like the
         // focused connection when it is not. A local shell tab has no
-        // bookmark, so the mark stays where it is.
+        // bookmark, so no bookmark is marked: the Local Shell row is.
         .onChange(of: sessions.selectedTabID) {
-            guard store.editingID == nil,
-                  let id = sessions.selectedTab?.connectionID,
-                  store.index.connection(id) != nil else { return }
-            store.selection = id
+            guard store.editingID == nil, let tab = sessions.selectedTab else { return }
+            if let id = tab.connectionID {
+                if store.index.connection(id) != nil { store.selection = id }
+            } else {
+                store.selection = nil
+            }
         }
         // The editor is a sheet, so the terminal keeps the whole window.
         .sheet(item: Binding(
