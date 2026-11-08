@@ -110,8 +110,11 @@ private struct TabButton: View {
             Image(systemName: tab.iconName)
                 .font(.system(size: 10))
                 .foregroundStyle(tagTint)
+            // The chosen tab has a strong name. The other names are dim, so
+            // the chosen tab is clear at a glance.
             TabTitle(tab: tab)
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                 .lineLimit(1)
                 .truncationMode(.tail)
             // The name takes the room that is left, so the slot after it sits
@@ -140,10 +143,8 @@ private struct TabButton: View {
         .frame(width: 150, height: TabBar.height - 6)
         .background(background)
         .clipShape(RoundedRectangle(cornerRadius: 5))
-        .overlay(
-            RoundedRectangle(cornerRadius: 5)
-                .strokeBorder(isSelected ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.clear))
-        )
+        // The chosen tab has no coloured edge. A coloured edge is the
+        // attention mark, and the bell mark has the accent colour too.
         .overlay { attentionGlow }
         .contentShape(Rectangle())
         .onTapGesture { sessions.selectedTabID = tab.id }
@@ -220,11 +221,12 @@ private struct TabButton: View {
 
     /// A tab you point at is marked, so it is clear what a click will hit.
     ///
-    /// The chosen tab is drawn solid. `.selection` is not used: on a bar it
-    /// is nearly the colour of the bar itself, and the chosen tab then looks
-    /// the same as every other one.
+    /// The chosen tab has an accent fill and no edge, because an edge is the
+    /// attention mark. A plain `.background` fill is not used: in the title
+    /// bar it is nearly the colour of the bar, so the chosen tab looked empty
+    /// and the grey tabs looked chosen. `.selection` has the same problem.
     private var background: AnyShapeStyle {
-        if isSelected { return AnyShapeStyle(.background) }
+        if isSelected { return AnyShapeStyle(Color.accentColor.opacity(0.25)) }
         if isHovering { return AnyShapeStyle(.tertiary) }
         // Every tab carries a light ground, so the row reads as a row of
         // tabs. With nothing behind them the names float on the bar and the
