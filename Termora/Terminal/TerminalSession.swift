@@ -101,6 +101,8 @@ final class TerminalSession: Identifiable, ObservableObject {
         state.makePlatformView = { [weak self] in
             if let view = self?.platformView { return view }
             let view = TerminalView(frame: .zero)
+            // A pane made inside a hidden tab must not take drops either.
+            view.isHidden = !(self?.state.isSurfaceVisible ?? true)
             self?.platformView = view
             return view
         }
@@ -172,8 +174,15 @@ final class TerminalSession: Identifiable, ObservableObject {
 
     /// Stop drawing a pane that is hidden behind another tab. The grid, the
     /// scrollback, and the child process all stay alive.
+    ///
+    /// The view is also hidden for AppKit. `opacity(0)` and
+    /// `allowsHitTesting(false)` act only in SwiftUI. AppKit finds a drop
+    /// target in its own view tree, so a clear pane in a tab higher in the
+    /// stack took drops meant for the tab in view. A hidden `NSView` stays
+    /// in the tree, so its surface lives on.
     func setVisible(_ isVisible: Bool) {
         state.isSurfaceVisible = isVisible
+        platformView?.isHidden = !isVisible
     }
 
     func focus() {

@@ -265,7 +265,7 @@ struct RemoteFileTable: NSViewRepresentable {
                     try await self.model.copy(entry, to: url)
                     finish.value(nil)
                 } catch {
-                    self.model.errorMessage = "Termora could not copy \(entry.name). "
+                    self.model.errorMessage = "Shellyard could not copy \(entry.name). "
                         + error.localizedDescription
                     finish.value(error)
                 }

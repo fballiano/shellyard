@@ -1,23 +1,23 @@
 {
-  "name": "termora",
+  "name": "shellyard",
   "owner": {
     "name": "Fabrizio Balliano",
-    "url": "https://github.com/fballiano/termora"
+    "url": "https://github.com/fballiano/shellyard"
   },
   "metadata": {
-    "description": "Agent integrations for Termora, the macOS SSH connection manager.",
-    "version": "1.0.0"
+    "description": "Agent integrations for Shellyard, the macOS SSH connection manager.",
+    "version": "2.0.0"
   },
   "plugins": [
     {
-      "name": "termora",
-      "source": "./plugins/termora",
-      "description": "Run commands on your saved SSH servers through the Termora application.",
-      "version": "1.0.0",
+      "name": "shellyard",
+      "source": "./plugins/shellyard",
+      "description": "Run commands on your saved SSH servers through the Shellyard application.",
+      "version": "2.0.0",
       "author": { "name": "Fabrizio Balliano" },
-      "homepage": "https://github.com/fballiano/termora",
+      "homepage": "https://github.com/fballiano/shellyard",
       "license": "MIT",
-      "keywords": ["ssh", "termora", "macos", "servers"]
+      "keywords": ["ssh", "shellyard", "macos", "servers"]
     }
   ]
 }

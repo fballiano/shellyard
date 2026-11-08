@@ -335,7 +335,7 @@ private struct SettingsEditor: View {
                 LocalCommandEditor(command: value)
             }
 
-            Text("Termora runs this on this Mac before it opens the connection. "
+            Text("Shellyard runs this on this Mac before it opens the connection. "
                  + "Use $URI$, $PORT$, $USERNAME$ and $NAME$ in the arguments. "
                  + "A password must never go on a command line.")
                 .font(.caption)
@@ -354,7 +354,7 @@ private struct SettingsEditor: View {
                 TextField("cd /opt/maho/app{ENTER}", text: value)
             }
 
-            Text("Termora types this into the session once it opens. Use "
+            Text("Shellyard types this into the session once it opens. Use "
                  + "{ENTER}, {TAB}, {ESC}, the arrow names, and {DELAY:500} to wait.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

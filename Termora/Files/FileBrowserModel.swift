@@ -183,7 +183,7 @@ final class FileBrowserModel: ObservableObject {
                 }
             } catch {
                 // Say which one failed, and stop rather than carry on blindly.
-                errorMessage = "Termora could not remove \(entry.name). "
+                errorMessage = "Shellyard could not remove \(entry.name). "
                     + error.localizedDescription
                 break
             }
@@ -201,7 +201,7 @@ final class FileBrowserModel: ObservableObject {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.prompt = "Save Here"
-        panel.message = "Where should Termora put the files?"
+        panel.message = "Where should Shellyard put the files?"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
 
         isBusy = true
@@ -215,11 +215,11 @@ final class FileBrowserModel: ObservableObject {
                     }
                 }
                 if tally.skippedLinks > 0 {
-                    errorMessage = "Termora left out \(tally.skippedLinks) link(s) in "
+                    errorMessage = "Shellyard left out \(tally.skippedLinks) link(s) in "
                         + "\(entry.name). Links are not followed."
                 }
             } catch {
-                errorMessage = "Termora could not copy \(entry.name). \(error.localizedDescription)"
+                errorMessage = "Shellyard could not copy \(entry.name). \(error.localizedDescription)"
                 break
             }
         }
@@ -256,13 +256,13 @@ final class FileBrowserModel: ObservableObject {
                 }
                 skippedLinks += tally.skippedLinks
             } catch {
-                errorMessage = "Termora could not copy \(url.lastPathComponent). "
+                errorMessage = "Shellyard could not copy \(url.lastPathComponent). "
                     + error.localizedDescription
                 break
             }
         }
         if skippedLinks > 0 {
-            errorMessage = "Termora left out \(skippedLinks) link(s). Links are not followed."
+            errorMessage = "Shellyard left out \(skippedLinks) link(s). Links are not followed."
         }
         await refresh()
     }

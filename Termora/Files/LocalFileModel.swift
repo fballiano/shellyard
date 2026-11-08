@@ -68,7 +68,7 @@ final class LocalFileModel: ObservableObject {
             }
             selection = []
         } catch {
-            errorMessage = "Termora could not read \(directory.path). \(error.localizedDescription)"
+            errorMessage = "Shellyard could not read \(directory.path). \(error.localizedDescription)"
             items = []
         }
     }
@@ -116,7 +116,7 @@ final class LocalFileModel: ObservableObject {
             do {
                 try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
             } catch {
-                errorMessage = "Termora could not move \(item.name) to the Trash. "
+                errorMessage = "Shellyard could not move \(item.name) to the Trash. "
                     + error.localizedDescription
                 break
             }
@@ -132,7 +132,7 @@ final class LocalFileModel: ObservableObject {
             )
             reload()
         } catch {
-            errorMessage = "Termora could not make that folder. \(error.localizedDescription)"
+            errorMessage = "Shellyard could not make that folder. \(error.localizedDescription)"
         }
     }
 }

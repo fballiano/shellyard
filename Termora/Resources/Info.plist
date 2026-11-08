@@ -8,7 +8,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>Termora Document</string>
+			<string>Shellyard Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -36,7 +36,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Termora asks Royal TSX for your saved connections when you import a Royal TSX document.</string>
+	<string>Shellyard asks Royal TSX for your saved connections when you import a Royal TSX document.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
@@ -51,7 +51,7 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>Termora bookmark</string>
+			<string>Shellyard bookmark</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.fabrizioballiano.Termora.node</string>
 			<key>UTTypeTagSpecification</key>

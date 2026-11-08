@@ -109,7 +109,7 @@ public struct RoyalTSXBridge: Sendable {
     private func run(script source: String) -> (value: String, error: String?) {
         var errorInfo: NSDictionary?
         guard let script = NSAppleScript(source: source) else {
-            return ("", "Termora could not build the script.")
+            return ("", "Shellyard could not build the script.")
         }
         let descriptor = script.executeAndReturnError(&errorInfo)
         if let errorInfo {

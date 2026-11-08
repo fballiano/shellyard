@@ -44,6 +44,9 @@ public enum VaultKeyStore {
         let sealedKey: Data
     }
 
+    /// Part of the key derivation. It keeps the old name of the app on
+    /// purpose: a change makes every remembered key useless, and Touch ID
+    /// then stops opening the documents.
     private static let purpose = Data("Termora document key".utf8)
 
     /// True when this Mac can use Touch ID and has a Secure Enclave.
@@ -80,7 +83,7 @@ public enum VaultKeyStore {
     @discardableResult
     public static func store(key: SymmetricKey, salt: Data, for url: URL) -> String? {
         guard SecureEnclave.isAvailable else {
-            return "This Mac has no Secure Enclave, so Termora cannot remember the key."
+            return "This Mac has no Secure Enclave, so Shellyard cannot remember the key."
         }
         // `.privateKeyUsage` is not optional here. Without it the rule only
         // guards stored data, and the Secure Enclave refuses to agree a shared
@@ -92,7 +95,7 @@ public enum VaultKeyStore {
             [.privateKeyUsage, .biometryCurrentSet],
             nil
         ) else {
-            return "Termora could not ask for a key that Touch ID guards."
+            return "Shellyard could not ask for a key that Touch ID guards."
         }
 
         do {

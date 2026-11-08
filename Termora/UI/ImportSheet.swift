@@ -39,7 +39,7 @@ struct ImportSheet: View {
     private var setup: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Import from Royal TSX").font(.title2.weight(.semibold))
-            Text("Termora adds the folders and connections to the document you "
+            Text("Shellyard adds the folders and connections to the document you "
                  + "have open. Nothing already in it is removed.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -78,7 +78,7 @@ struct ImportSheet: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.radioGroup)
-                Text("A Termora connection uses one method. The report names every "
+                Text("A Shellyard connection uses one method. The report names every "
                      + "entry this touched, so nothing disappears without a word.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -114,7 +114,7 @@ struct ImportSheet: View {
 
     private func failure(_ reason: String) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Termora could not import the document", systemImage: "exclamationmark.triangle")
+            Label("Shellyard could not import the document", systemImage: "exclamationmark.triangle")
                 .font(.headline)
             Text(reason).font(.callout).textSelection(.enabled)
             HStack {

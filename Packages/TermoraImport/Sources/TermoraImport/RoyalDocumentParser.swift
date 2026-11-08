@@ -13,9 +13,9 @@ public enum RoyalParseError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case let .cannotReadFile(path):
-            "Termora could not read \(path)."
+            "Shellyard could not read \(path)."
         case .notARoyalDocument:
-            "This file is not a Royal TSX document. Termora expects an .rtsz file that holds XML."
+            "This file is not a Royal TSX document. Shellyard expects an .rtsz file that holds XML."
         case let .malformedXML(detail):
             "The Royal TSX document is damaged. \(detail)"
         }

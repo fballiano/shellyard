@@ -1,7 +1,28 @@
-# Developing Termora
+# Developing Shellyard
 
 This document is for people who change the code. For the use of the
 application, see the [README](../README.md).
+
+## The two names
+
+The application is called **Shellyard**. Until version 1.2.0 it was called
+Termora, and the code keeps that name: the Xcode project, the scheme, the
+packages (`TermoraModel` and the others), the Swift module, the types, and
+the comments. Do not rename them.
+
+These keep the old name on purpose, because existing installs depend on them:
+
+- The bundle identifier `com.fabrizioballiano.Termora`. macOS keys the
+  settings, the permissions, and the Touch ID key by it.
+- The `UserDefaults` keys (`TermoraLastDocumentPath` and the others).
+- The folders `~/Library/Application Support/Termora` and
+  `~/Library/Caches/Termora`.
+- The string `"Termora document key"` in `VaultKeyStore`. It is part of the
+  key derivation, and a change makes every remembered Touch ID key useless.
+- The `.termora` document extension and its type identifiers.
+
+Everything that a person reads says Shellyard: the application name, the
+messages, the `shellyard` command, the release zip, and the cask.
 
 ## Requirements
 
@@ -13,7 +34,7 @@ application, see the [README](../README.md).
 
 ```sh
 ./run.sh              # make the project, build, and start the application
-./run.sh --install    # also copy it to /Applications and link `termora`
+./run.sh --install    # also copy it to /Applications and link `shellyard`
 ```
 
 `./run.sh` quits every running Termora before it starts the new build.
@@ -24,7 +45,7 @@ Or by hand:
 xcodegen generate
 xcodebuild -project Termora.xcodeproj -scheme Termora \
            -configuration Debug -derivedDataPath build build
-open build/Build/Products/Debug/Termora.app
+open build/Build/Products/Debug/Shellyard.app
 ```
 
 `Termora.xcodeproj` is generated. Do not edit it. Change `project.yml` and
@@ -43,7 +64,7 @@ run `xcodegen generate` again.
 | `Packages/TermoraImport` | The Royal TSX reader and the AppleScript bridge |
 | `Packages/TermoraSFTP` | The SFTP version 3 client and the file browser model |
 | `TermoraUITests` | Tests that drive the real application |
-| `Tools/` | The `termora-askpass` helper and the `termora` command |
+| `Tools/` | The `termora-askpass` helper and the `shellyard` command (`Tools/termora-cli`) |
 | `Agents/`, `plugins/` | The agent integrations, one folder per agent |
 
 A `TerminalTab` with no `connectionID` is a local shell tab.
@@ -105,8 +126,13 @@ Two suites are opt-in:
 The tag starts `.github/workflows/release.yml`. It builds the Release
 configuration, signs it with the Developer ID certificate, has Apple notarize
 it, staples the ticket, publishes a GitHub release with the zip, and points
-`Casks/termora.rb` at the new zip with a commit on `main`. Pull that commit
-before your next push.
+`Casks/shellyard.rb` in
+[fballiano/homebrew-tap](https://github.com/fballiano/homebrew-tap) at the
+new zip. It pushes to the tap with the deploy key in the secret
+`TAP_DEPLOY_KEY`, which can write to that repository only.
+
+`Casks/termora.rb` in this repository is the cask of the old tap. It is
+frozen and deprecated. The workflow does not change it.
 
 ### Signing and notarization
 
@@ -166,7 +192,7 @@ tunnels again.
 
 A master is a process of its own, so it can outlive the application. Termora
 closes every master on each lock and on each quit, also the masters of
-`termora run`, which have no tab. Every lock path goes through
+`shellyard run`, which have no tab. Every lock path goes through
 `DocumentStore.willClose`, which calls `SessionsController.closeEverything()`.
 
 A crash or Force Quit gives Termora no chance to close anything. The masters

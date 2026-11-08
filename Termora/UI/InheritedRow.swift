@@ -68,7 +68,7 @@ struct InheritedRow<Value: Codable & Hashable & Sendable, Editor: View>: View {
             }
 
             if isInheriting {
-                Text(sourceFolderName.map { "from \($0)" } ?? "Termora default")
+                Text(sourceFolderName.map { "from \($0)" } ?? "Shellyard default")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 138)

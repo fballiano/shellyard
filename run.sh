@@ -1,9 +1,9 @@
 #!/bin/bash
-# Builds Termora and starts it.
+# Builds Shellyard and starts it.
 #
 #   ./run.sh            build and start
 #   ./run.sh --install  also copy the application to /Applications and
-#                       link the `termora` command into /usr/local/bin
+#                       link the `shellyard` command into /usr/local/bin
 #
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -23,7 +23,7 @@ xcodebuild -project Termora.xcodeproj -scheme Termora \
            -derivedDataPath build build \
     | grep -E "error:|warning:|BUILD" || true
 
-APP="build/Build/Products/Debug/Termora.app"
+APP="build/Build/Products/Debug/Shellyard.app"
 if [ ! -d "$APP" ]; then
     echo "The build produced no application."
     exit 1
@@ -31,12 +31,12 @@ fi
 
 if [ "${1:-}" = "--install" ]; then
     echo "==> Copying to /Applications"
-    rm -rf "/Applications/Termora.app"
-    cp -R "$APP" "/Applications/Termora.app"
-    APP="/Applications/Termora.app"
+    rm -rf "/Applications/Shellyard.app"
+    cp -R "$APP" "/Applications/Shellyard.app"
+    APP="/Applications/Shellyard.app"
 
-    CLI="$APP/Contents/MacOS/termora-cli"
-    LINK="/usr/local/bin/termora"
+    CLI="$APP/Contents/MacOS/shellyard-cli"
+    LINK="/usr/local/bin/shellyard"
     if [ "$(readlink "$LINK" 2>/dev/null)" != "$CLI" ]; then
         echo "==> Linking $LINK (asks for your password)"
         sudo mkdir -p /usr/local/bin
@@ -46,5 +46,5 @@ fi
 
 echo "==> Starting $APP"
 # Quit an older copy first, so the new one is the one you see.
-pkill -f "Termora.app/Contents/MacOS/Termora" 2>/dev/null || true
+pkill -f "Shellyard.app/Contents/MacOS/Shellyard" 2>/dev/null || true
 open "$APP"

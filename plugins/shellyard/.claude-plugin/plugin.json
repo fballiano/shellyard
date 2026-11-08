@@ -1,0 +1,10 @@
+{
+  "name": "shellyard",
+  "description": "Run commands on your saved SSH servers through the Shellyard application.",
+  "version": "2.0.0",
+  "author": { "name": "Fabrizio Balliano" },
+  "homepage": "https://github.com/fballiano/shellyard",
+  "repository": "https://github.com/fballiano/shellyard",
+  "license": "MIT",
+  "keywords": ["ssh", "shellyard", "macos", "servers"]
+}

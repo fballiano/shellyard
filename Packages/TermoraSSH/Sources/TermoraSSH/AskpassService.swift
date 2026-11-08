@@ -202,9 +202,9 @@ public enum AskpassServiceError: Error, LocalizedError {
         case let .socketPathTooLong(path):
             "The socket path is too long for a Unix socket: \(path)"
         case let .cannotCreateSocket(code):
-            "Termora could not create the password socket. Code \(code)."
+            "Shellyard could not create the password socket. Code \(code)."
         case let .cannotBind(path, code):
-            "Termora could not listen at \(path). Code \(code)."
+            "Shellyard could not listen at \(path). Code \(code)."
         }
     }
 }

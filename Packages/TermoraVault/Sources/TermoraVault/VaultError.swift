@@ -24,11 +24,11 @@ public enum VaultError: Error, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notATermoraDocument:
-            "This file is not a Termora document."
+            "This file is not a Shellyard document."
         case .truncatedFile:
             "This document is incomplete. Try the .bak file next to it."
         case let .unsupportedFormatVersion(version):
-            "This document uses format version \(version). Update Termora to open it."
+            "This document uses format version \(version). Update Shellyard to open it."
         case let .unsupportedAlgorithm(name):
             "This document uses an algorithm this version does not have: \(name)."
         case .cannotDecrypt:

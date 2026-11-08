@@ -126,7 +126,7 @@ final class RemoteEditController: ObservableObject {
             openInEditor(edit, with: application)
         } catch {
             end(edit)
-            errorMessage = "Termora could not open \(edit.name) for editing. "
+            errorMessage = "Shellyard could not open \(edit.name) for editing. "
                 + error.localizedDescription
         }
     }
@@ -154,7 +154,7 @@ final class RemoteEditController: ObservableObject {
             }
         } catch {
             edit.activity = .failed(error.localizedDescription)
-            errorMessage = "Termora could not check \(edit.name) on "
+            errorMessage = "Shellyard could not check \(edit.name) on "
                 + "\(edit.connection.name). \(error.localizedDescription)"
         }
         openInEditor(edit, with: application)
@@ -174,7 +174,7 @@ final class RemoteEditController: ObservableObject {
         ) { _, error in
             guard let error else { return }
             Task { @MainActor in
-                self.errorMessage = "Termora could not open \(edit.name) in "
+                self.errorMessage = "Shellyard could not open \(edit.name) in "
                     + "\(chosen.deletingPathExtension().lastPathComponent). "
                     + error.localizedDescription
             }
@@ -239,7 +239,7 @@ final class RemoteEditController: ObservableObject {
     func upload(_ edit: RemoteEdit, force: Bool) async {
         guard edit.connection.isConnected else {
             edit.activity = .failed("The connection is closed.")
-            errorMessage = "Termora could not copy \(edit.name) back. "
+            errorMessage = "Shellyard could not copy \(edit.name) back. "
                 + "The connection to \(edit.connection.name) is closed."
             return
         }
@@ -263,7 +263,7 @@ final class RemoteEditController: ObservableObject {
             conflicted = edit
         } catch {
             edit.activity = .failed(error.localizedDescription)
-            errorMessage = "Termora could not copy \(edit.name) back to "
+            errorMessage = "Shellyard could not copy \(edit.name) back to "
                 + "\(edit.connection.name). \(error.localizedDescription)"
         }
     }

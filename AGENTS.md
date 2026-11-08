@@ -4,8 +4,12 @@ This file provides guidance to coding agents when working with code in this repo
 
 ## What this is
 
-Termora is a native macOS SSH connection manager (SwiftUI, Swift 6, strict
-concurrency `complete`, macOS 26+). It embeds the Ghostty terminal engine
+Shellyard is a native macOS SSH connection manager (SwiftUI, Swift 6, strict
+concurrency `complete`, macOS 26+). It was called Termora until 1.2.0, and
+the code keeps that name: the project, the packages, the module, and the
+types. User-visible text says Shellyard. Some identifiers must keep the old
+name, or users lose data: see "The two names" in Docs/DEVELOPMENT.md before
+you rename anything. It embeds the Ghostty terminal engine
 through libghostty. README.md is the user guide. Docs/DEVELOPMENT.md is
 detailed and current; read it for the document format, the SSH
 control-master design, the import pipeline, and the release process.

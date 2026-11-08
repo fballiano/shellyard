@@ -1,16 +1,15 @@
 name: Release
 
-# A tag `v*` builds the application, signs it with the Developer ID
-# certificate, has Apple notarize it, publishes a GitHub release with the
-# zip, and points the Homebrew cask in Casks/termora.rb at it. The repo is
-# its own tap:
+# A tag `v*` builds Shellyard, signs it with the Developer ID certificate,
+# has Apple notarize it, publishes a GitHub release with the zip, and points
+# the cask Casks/shellyard.rb in fballiano/homebrew-tap at it:
 #
-#   brew tap fballiano/termora https://github.com/fballiano/termora
-#   brew trust --cask fballiano/termora/termora
-#   brew install --cask fballiano/termora/termora
+#   brew tap fballiano/tap
+#   brew trust --tap fballiano/tap
+#   brew install --cask shellyard
 #
-# Always use the full name: the main cask repository has a different
-# application that is also called "termora".
+# Casks/termora.rb in this repository is the cask of the old tap. It is
+# frozen and deprecated, and this workflow does not change it.
 #
 # Run it by hand (Actions -> Release -> Run workflow) for a dry run: it
 # signs and notarizes, keeps the zip as a workflow artifact, and publishes
@@ -28,6 +27,8 @@ name: Release
 #                                          .p8, in base64
 #   secret    NOTARY_KEY_ID                the ID of that key
 #   secret    NOTARY_ISSUER_ID             the issuer ID of that key
+#   secret    TAP_DEPLOY_KEY               a deploy key with write access
+#                                          to fballiano/homebrew-tap
 
 on:
   push:
@@ -42,7 +43,7 @@ jobs:
     runs-on: macos-26
     env:
       TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-      APP: build/Build/Products/Release/Termora.app
+      APP: build/Build/Products/Release/Shellyard.app
     steps:
       - uses: actions/checkout@v7
 
@@ -128,7 +129,7 @@ jobs:
       # other programs, so nobody would see it. Start both here.
       - name: Start the tools
         run: |
-          "$APP/Contents/MacOS/termora-cli" --help > /dev/null
+          "$APP/Contents/MacOS/shellyard-cli" --help > /dev/null
           set +e
           "$APP/Contents/MacOS/termora-askpass" probe < /dev/null
           STATUS=$?
@@ -181,17 +182,17 @@ jobs:
           else
             VERSION="dry-run-$(git rev-parse --short HEAD)"
           fi
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "Termora-$VERSION.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "Shellyard-$VERSION.zip"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(shasum -a 256 "Termora-$VERSION.zip" | cut -d' ' -f1)" \
+          echo "sha256=$(shasum -a 256 "Shellyard-$VERSION.zip" | cut -d' ' -f1)" \
             >> "$GITHUB_OUTPUT"
 
       - name: Keep the dry-run zip
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: Termora-${{ steps.package.outputs.version }}
-          path: Termora-${{ steps.package.outputs.version }}.zip
+          name: Shellyard-${{ steps.package.outputs.version }}
+          path: Shellyard-${{ steps.package.outputs.version }}.zip
 
       - name: Create the release
         if: github.event_name == 'push'
@@ -199,25 +200,44 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            "Termora-${{ steps.package.outputs.version }}.zip" \
-            --title "Termora ${{ steps.package.outputs.version }}" \
+            "Shellyard-${{ steps.package.outputs.version }}.zip" \
+            --title "Shellyard ${{ steps.package.outputs.version }}" \
             --generate-notes
+
+      # The cask lives in fballiano/homebrew-tap. The secret TAP_DEPLOY_KEY is
+      # a deploy key with write access to that repository only.
+      - name: Check out the Homebrew tap
+        if: github.event_name == 'push'
+        uses: actions/checkout@v7
+        with:
+          repository: fballiano/homebrew-tap
+          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+          path: homebrew-tap
 
       - name: Point the cask at the release
         if: github.event_name == 'push'
+        working-directory: homebrew-tap
         run: |
-          git fetch origin main
-          git checkout main
+          set -euo pipefail
           VERSION="${{ steps.package.outputs.version }}"
           SHA="${{ steps.package.outputs.sha256 }}"
           sed -i '' \
-            -e "s|^  version \".*\"|  version \"$VERSION\"|" \
-            -e "s|^  sha256 \".*\"|  sha256 \"$SHA\"|" \
-            Casks/termora.rb
+            -e "s|^  version \".*\"$|  version \"$VERSION\"|" \
+            -e "s|^  sha256 \".*\"$|  sha256 \"$SHA\"|" \
+            Casks/shellyard.rb
+          if git diff --quiet; then
+            echo "The tap already holds version $VERSION."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "Point the Homebrew cask at $VERSION"
-          git push origin main
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Point shellyard at $VERSION" -- Casks/shellyard.rb
+          # Another application can push to the tap at the same time.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+          done
+          exit 1
 
       - name: Remove the signing keychain
         if: always()

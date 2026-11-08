@@ -20,7 +20,7 @@ struct WelcomeView: View {
                 .foregroundStyle(.tint)
 
             VStack(spacing: 6) {
-                Text("Termora").font(.largeTitle.weight(.semibold))
+                Text("Shellyard").font(.largeTitle.weight(.semibold))
                 Text("Keep your SSH connections in one encrypted document.")
                     .foregroundStyle(.secondary)
             }
@@ -94,7 +94,7 @@ struct WelcomeView: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [UTType.termoraDocument, UTType.data]
-        panel.message = "Choose a Termora document."
+        panel.message = "Choose a Shellyard document."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         store.chooseDocument(at: url)
     }
@@ -132,7 +132,7 @@ struct CreateDocumentSheet: View {
             SecureField("Master password", text: $password)
             SecureField("Repeat the master password", text: $confirmation)
 
-            Text("Termora cannot recover this password. Nobody can open the "
+            Text("Shellyard cannot recover this password. Nobody can open the "
                  + "document without it.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -160,7 +160,7 @@ struct CreateDocumentSheet: View {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "Connections.termora"
         panel.allowedContentTypes = [UTType.termoraDocument]
-        panel.message = "Where should Termora keep your document?"
+        panel.message = "Where should Shellyard keep your document?"
         guard panel.runModal() == .OK else { return }
         url = panel.url
     }

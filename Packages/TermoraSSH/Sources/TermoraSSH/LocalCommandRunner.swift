@@ -23,7 +23,7 @@ public enum LocalCommandRunner {
         public var problem: String? {
             if timedOut {
                 return "\(command.name) did not finish in "
-                    + "\(Int(LocalCommandRunner.limit)) seconds, so Termora stopped it. "
+                    + "\(Int(LocalCommandRunner.limit)) seconds, so Shellyard stopped it. "
                     + "A command that waits for an answer cannot run here."
             }
             guard let result, !result.succeeded else { return nil }

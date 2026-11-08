@@ -22,20 +22,20 @@ import Foundation
 /// The short form. A wrong verb prints this, so an agent reads three lines
 /// and one pointer rather than a page.
 let usage = """
-usage: termora list
-       termora status
-       termora run <bookmark> -- <command...>
+usage: shellyard list
+       shellyard status
+       shellyard run <bookmark> -- <command...>
 
-Run `termora --help` for the whole contract.
+Run `shellyard --help` for the whole contract.
 """
 
 /// The whole contract, for a person or an agent that asks for it.
 let helpText = """
-usage: termora list
-       termora status
-       termora run <bookmark> -- <command...>
+usage: shellyard list
+       shellyard status
+       shellyard run <bookmark> -- <command...>
 
-Termora keeps the SSH connections. This tool asks the running application
+Shellyard keeps the SSH connections. This tool asks the running application
 to use one. It holds no password and it reads no document.
 
   list    Prints every bookmark, one per line, sorted.
@@ -48,19 +48,19 @@ to use one. It holds no password and it reads no document.
   run     Runs a command on a bookmark and streams the output.
           Give the full name that `list` prints, or a bare name that is
           unique. Put every word of the command after `--`.
-          Termora opens the connection when it is closed.
+          Shellyard opens the connection when it is closed.
 
 Examples:
-  termora run web1 -- uptime
-  termora run "Prod / Web / web1" -- systemctl is-active nginx
+  shellyard run web1 -- uptime
+  shellyard run "Prod / Web / web1" -- systemctl is-active nginx
 
 Exit codes:
   0   The request succeeded.
-  2   Termora is not running, the document is locked, or the request
+  2   Shellyard is not running, the document is locked, or the request
       was refused. The reason is one line on standard error.
   *   `run` exits with the exit code of the far command.
 
-Termora asks you for a password or a passphrase in its own window. The
+Shellyard asks you for a password or a passphrase in its own window. The
 password never reaches this tool, the command line, or the environment.
 """
 
@@ -72,10 +72,10 @@ func fail(_ message: String, code: Int32) -> Never {
 /// Sends one request. Every failure ends the tool with code 2.
 func reply(for request: AgentRequest) -> AgentReply {
     guard let reply = AgentClient.send(request, socketPath: AgentSocket.defaultPath()) else {
-        fail("Termora is not running, or the document is locked.", code: 2)
+        fail("Shellyard is not running, or the document is locked.", code: 2)
     }
     guard reply.ok else {
-        fail(reply.error ?? "Termora refused the request.", code: 2)
+        fail(reply.error ?? "Shellyard refused the request.", code: 2)
     }
     return reply
 }
@@ -109,7 +109,7 @@ case "run":
         command: .run, bookmark: arguments[1], words: Array(arguments.dropFirst(3))
     ))
     guard let argv = answer.argv, let executable = argv.first else {
-        fail("Termora sent no command back.", code: 2)
+        fail("Shellyard sent no command back.", code: 2)
     }
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)

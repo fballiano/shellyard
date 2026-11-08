@@ -652,7 +652,7 @@ final class SessionsController: ObservableObject {
         where forward.isEnabled && forward.isReady && !clashing.contains(forward.id) {
             let result = await sshConnection.addForward(forward)
             if !result.succeeded {
-                errorMessage = "Termora could not open the tunnel \(forward.summary) "
+                errorMessage = "Shellyard could not open the tunnel \(forward.summary) "
                     + "on \(connection.name). \(result.summary)"
             }
         }
@@ -750,8 +750,8 @@ final class SessionsController: ObservableObject {
 
         if !result.succeeded {
             errorMessage = active
-                ? "Termora could not open the tunnel \(forward.summary). \(result.summary)"
-                : "Termora could not close the tunnel \(forward.summary). \(result.summary)"
+                ? "Shellyard could not open the tunnel \(forward.summary). \(result.summary)"
+                : "Shellyard could not close the tunnel \(forward.summary). \(result.summary)"
         }
     }
 

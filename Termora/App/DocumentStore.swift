@@ -96,7 +96,7 @@ final class DocumentStore: ObservableObject {
                 if let problem = VaultKeyStore.store(
                     key: material.key, salt: material.salt, for: url
                 ) {
-                    errorMessage = "The document is open, but Termora could not "
+                    errorMessage = "The document is open, but Shellyard could not "
                         + "remember it for Touch ID. \(problem)"
                 }
             }
@@ -115,13 +115,13 @@ final class DocumentStore: ObservableObject {
             let outcome = VaultKeyStore.loadKey(
                 salt: header.kdf.salt,
                 for: url,
-                reason: "unlock your Termora document"
+                reason: "unlock your Shellyard document"
             )
             switch outcome {
             case let .key(key):
                 adopt(try Vault.open(at: url, key: key))
             case .noRecord:
-                unlockErrorMessage = "Termora remembers no key for this document. "
+                unlockErrorMessage = "Shellyard remembers no key for this document. "
                     + "Use the master password."
             case let .failed(problem):
                 unlockErrorMessage = problem
@@ -236,7 +236,7 @@ final class DocumentStore: ObservableObject {
         do {
             try await vault.changePassword(to: newPassword)
         } catch {
-            return "Termora could not save the document. \(error.localizedDescription)"
+            return "Shellyard could not save the document. \(error.localizedDescription)"
         }
         VaultKeyStore.removeKey(salt: oldSalt, for: vault.url)
         if hadTouchID {
@@ -244,7 +244,7 @@ final class DocumentStore: ObservableObject {
             if let problem = VaultKeyStore.store(
                 key: material.key, salt: material.salt, for: vault.url
             ) {
-                return "The password changed, but Termora could not remember "
+                return "The password changed, but Shellyard could not remember "
                     + "it for Touch ID. \(problem)"
             }
         }
@@ -266,7 +266,7 @@ final class DocumentStore: ObservableObject {
         do {
             try vault.save()
         } catch {
-            errorMessage = "Termora could not save the document. \(error.localizedDescription)"
+            errorMessage = "Shellyard could not save the document. \(error.localizedDescription)"
         }
     }
 

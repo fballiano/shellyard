@@ -11,6 +11,9 @@ import TermoraModel
 /// None of these is a secret, and none belongs to one document. A value that
 /// belongs to a connection lives in the document, where the inheritance
 /// system handles it.
+///
+/// The keys keep the old name of the app, Termora, on purpose. A new key
+/// would lose every setting that you made before the rename.
 enum AppSettings {
     static let confirmQuitKey = "TermoraConfirmQuit"
     static let openLastDocumentKey = "TermoraOpenLastDocumentAtLaunch"

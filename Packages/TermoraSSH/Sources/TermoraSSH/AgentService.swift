@@ -172,7 +172,7 @@ public final class AgentService: @unchecked Sendable {
         setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
         guard let responder else {
-            Self.reply(to: client, with: .refused("Termora is not ready."))
+            Self.reply(to: client, with: .refused("Shellyard is not ready."))
             close(client)
             return
         }
@@ -223,7 +223,7 @@ public enum AgentServiceError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .alreadyServed(path):
-            "Another copy of Termora already answers the termora tool at \(path)."
+            "Another copy of Shellyard already answers the shellyard tool at \(path)."
         }
     }
 }

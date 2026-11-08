@@ -193,7 +193,7 @@ struct LocalFileTable: NSViewRepresentable {
                         Task { @MainActor in
                             if let reason {
                                 self?.model.errorMessage =
-                                    "Termora could not copy that file. \(reason)"
+                                    "Shellyard could not copy that file. \(reason)"
                             }
                             self?.model.reload()
                         }

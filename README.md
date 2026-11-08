@@ -1,14 +1,14 @@
 <div align="center">
-<img src="Docs/icon.png" width="128" alt="Termora" />
-<h1>Termora</h1>
+<img src="Docs/icon.png" width="128" alt="Shellyard" />
+<h1>Shellyard</h1>
 <p><strong>An SSH connection manager for macOS, built on the Ghostty terminal engine.</strong></p>
 <p>
-<a href="https://github.com/fballiano/termora/releases/latest"><img src="https://img.shields.io/github/v/release/fballiano/termora?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Latest release" /></a>
-<a href="https://github.com/fballiano/termora/releases"><img src="https://img.shields.io/github/downloads/fballiano/termora/total?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Downloads" /></a>
+<a href="https://github.com/fballiano/shellyard/releases/latest"><img src="https://img.shields.io/github/v/release/fballiano/shellyard?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Latest release" /></a>
+<a href="https://github.com/fballiano/shellyard/releases"><img src="https://img.shields.io/github/downloads/fballiano/shellyard/total?style=for-the-badge&color=1E8A5F&labelColor=1B1F23" alt="Downloads" /></a>
 <img src="https://img.shields.io/badge/macOS-26%2B-1E8A5F?style=for-the-badge&labelColor=1B1F23&logo=apple&logoColor=white" alt="macOS 26 or later" />
 <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-1E8A5F?style=for-the-badge&labelColor=1B1F23" alt="MIT licence" /></a>
 </p>
-<p><a href="https://github.com/fballiano/termora/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20macOS-1E8A5F?style=for-the-badge&labelColor=1E8A5F&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgMTd2MmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyIC0ydi0yIi8+PHBhdGggZD0iTTcgMTFsNSA1bDUgLTUiLz48cGF0aCBkPSJNMTIgNGwwIDEyIi8+PC9zdmc+" alt="Download for macOS" height="36" /></a></p>
+<p><a href="https://github.com/fballiano/shellyard/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20macOS-1E8A5F?style=for-the-badge&labelColor=1E8A5F&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgMTd2MmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyIC0ydi0yIi8+PHBhdGggZD0iTTcgMTFsNSA1bDUgLTUiLz48cGF0aCBkPSJNMTIgNGwwIDEyIi8+PC9zdmc+" alt="Download for macOS" height="36" /></a></p>
 </div>
 
 <table align=center><tr><td align=center>
@@ -20,11 +20,11 @@
 
 ---
 
-Termora keeps your servers in one encrypted file and opens them in tabs, with
+Shellyard keeps your servers in one encrypted file and opens them in tabs, with
 the Ghostty terminal engine and your own Ghostty configuration. A local shell
 sits next to your servers, so all of your terminal work stays in one window.
 
-Termora does not have its own SSH. It drives the OpenSSH of macOS, so your
+Shellyard does not have its own SSH. It drives the OpenSSH of macOS, so your
 `~/.ssh/config`, your keys, your SSH agent, and your jump hosts work as they
 are.
 
@@ -44,38 +44,38 @@ are.
   application on your Mac.
 - **Secrets stay secret.** One file sealed with AES-256-GCM. Unlock with
   Touch ID. Passwords never go on a command line.
-- **Scripts and AI agents.** `termora run web1 -- uptime` runs a command on a
+- **Scripts and AI agents.** `shellyard run web1 -- uptime` runs a command on a
   saved server, and the tool never sees a password.
 - **Coming from Royal TSX.** The import brings your folders, connections, and
   saved passwords, and reports everything that did not come across.
 
 ## Install
 
-Termora needs macOS 26 or later on Apple silicon.
+Shellyard needs macOS 26 or later on Apple silicon.
 
 ```bash
-brew tap fballiano/termora https://github.com/fballiano/termora
-brew trust --cask fballiano/termora/termora
-brew install --cask fballiano/termora/termora
+brew tap fballiano/tap
+brew trust --tap fballiano/tap
+brew install --cask shellyard
 ```
 
 To update:
 
 ```bash
 brew update
-brew upgrade --cask fballiano/termora/termora
+brew upgrade --cask shellyard
 ```
 
 Or download the zip from the
-[latest release](https://github.com/fballiano/termora/releases/latest) and
-drag **Termora** into **Applications**.
+[latest release](https://github.com/fballiano/shellyard/releases/latest) and
+drag **Shellyard** into **Applications**.
 
-Termora is signed with an Apple Developer ID and notarized by Apple, so it
+Shellyard is signed with an Apple Developer ID and notarized by Apple, so it
 opens like any other application.
 
 ## Getting started
 
-1. Start Termora and select **Create a document…**. Choose where to keep the
+1. Start Shellyard and select **Create a document…**. Choose where to keep the
    file and a master password.
 2. Add your servers: ⌘N for a connection, ⇧⌘N for a folder. From Royal TSX,
    select **File → Import from Royal TSX…** instead.
@@ -122,7 +122,7 @@ comes from.
   opens, for example to open a firewall.
 - **After connecting** types text into the session when the prompt appears.
   Key names such as `{ENTER}`, `{TAB}`, `{ESC}`, the arrows, and
-  `{DELAY:500}` work. Termora knows that the prompt is there when the shell
+  `{DELAY:500}` work. Shellyard knows that the prompt is there when the shell
   sets the window title, as fish does, and as bash and zsh do on most
   servers. A shell that sets no title gets the text after 3 seconds.
 
@@ -155,14 +155,14 @@ Reconnect runs the command before connecting again, opens the tunnels again,
 and types the text after connecting into each tab. If a connection could not
 open at all, its tab offers **Try Again**, which ⌘R also does.
 
-When your Mac wakes from sleep, Termora reconnects by itself. It waits for
+When your Mac wakes from sleep, Shellyard reconnects by itself. It waits for
 the network, then asks each server if the connection still works, and
 reconnects the ones that do not. With **Lock when the Mac sleeps** on, the
 document is locked instead, and nothing is open to reconnect.
 
-At other times, Termora finds a dead network through keep-alive. With
+At other times, Shellyard finds a dead network through keep-alive. With
 keep-alive at 0, a dropped connection can stay open for minutes before
-Termora sees it.
+Shellyard sees it.
 
 ### Tabs, splits and local shells
 
@@ -199,12 +199,12 @@ same connection as your terminals.
   One progress bar covers the whole copy.
 - Rename, make folders, and delete on both sides.
 - Double-click a remote file to open it in an application on your Mac. When
-  you save it, Termora copies it back. If the file changed on the server in
-  the meantime, Termora asks first.
+  you save it, Shellyard copies it back. If the file changed on the server in
+  the meantime, Shellyard asks first.
 
 ### Terminal appearance
 
-Termora reads your Ghostty configuration file, in this order, and never
+Shellyard reads your Ghostty configuration file, in this order, and never
 writes to it:
 
 1. `$XDG_CONFIG_HOME/ghostty/config`
@@ -224,40 +224,40 @@ Fonts, colours, and `theme = <name>` all work, also as
 - The lock in the title bar, or ⌃⌘L, closes every session and every tunnel.
   **Settings** can also lock the document after a time of rest or when the
   Mac sleeps.
-- Termora gives each password to OpenSSH through `SSH_ASKPASS` and a private
+- Shellyard gives each password to OpenSSH through `SSH_ASKPASS` and a private
   socket. A password never goes into a command line, into the environment,
   or into a file.
 
 ### Scripts and AI agents
 
-The `termora` command comes with the application. A Homebrew install puts it
+The `shellyard` command comes with the application. A Homebrew install puts it
 on your PATH. Otherwise, call
-`/Applications/Termora.app/Contents/MacOS/termora-cli`.
+`/Applications/Shellyard.app/Contents/MacOS/shellyard-cli`.
 
 ```bash
-termora list                  # every bookmark, one per line
-termora status                # every open connection: name, state, tunnels
-termora run web1 -- uptime    # run a command on a bookmark
+shellyard list                  # every bookmark, one per line
+shellyard status                # every open connection: name, state, tunnels
+shellyard run web1 -- uptime    # run a command on a bookmark
 ```
 
 `run` opens the connection if it is closed. If OpenSSH asks a question, the
-question appears in Termora, and the command waits. The output streams as it
+question appears in Shellyard, and the command waits. The output streams as it
 arrives, and the exit code of the remote command is the exit code of
-`termora`. The command gets nothing while the document is locked. Exit code 2
-means that Termora is not running, that the document is locked, or that the
+`shellyard`. The command gets nothing while the document is locked. Exit code 2
+means that Shellyard is not running, that the document is locked, or that the
 request was refused.
 
-`termora --help` prints the whole contract, which is often enough for an
+`shellyard --help` prints the whole contract, which is often enough for an
 agent. For a fixed setup, install the instructions for your agent:
 
 | Agent | How to install it |
 |---|---|
-| Claude Code | `/plugin marketplace add fballiano/termora`, then `/plugin install termora@termora` |
+| Claude Code | `/plugin marketplace add fballiano/shellyard`, then `/plugin install shellyard@shellyard` |
 | Codex, Amp, Zed, and others | Paste `Agents/AGENTS.snippet.md` into your `AGENTS.md` |
-| Gemini CLI | `gemini extensions install https://github.com/fballiano/termora` |
-| Cursor | Copy `Agents/cursor/termora.mdc` into `.cursor/rules/` |
+| Gemini CLI | `gemini extensions install https://github.com/fballiano/shellyard` |
+| Cursor | Copy `Agents/cursor/shellyard.mdc` into `.cursor/rules/` |
 
-In Claude Code, allow the command with the permission `Bash(termora:*)`.
+In Claude Code, allow the command with the permission `Bash(shellyard:*)`.
 
 ### Importing from Royal TSX
 
@@ -265,37 +265,37 @@ In Claude Code, allow the command with the permission `Bash(termora:*)`.
 `.rtsz` document to the open document. Nothing that is already there is
 removed.
 
-- **Passwords.** Termora asks Royal TSX for each saved password through
-  AppleScript. The first time, macOS asks if Termora can control Royal TSX:
+- **Passwords.** Shellyard asks Royal TSX for each saved password through
+  AppleScript. The first time, macOS asks if Shellyard can control Royal TSX:
   answer yes. If Royal TSX is not available, the import still runs, and the
   report names each password that you must type.
 - **Key sequences** become the text after connecting. **Tasks** before
   connecting become the command before connecting. A task that puts
   `$PASSWORD$` on its command line is refused.
-- **Key and password.** Royal TSX lets an entry have both. A Termora
+- **Key and password.** Royal TSX lets an entry have both. A Shellyard
   connection uses one, so the import asks which one to keep.
 - **The report** lists every entry, password, and setting that did not come
   across, and why.
 
 ## FAQ
 
-**Does Termora use my `~/.ssh/config`?**
-Yes. Termora runs `/usr/bin/ssh`, so everything in your SSH configuration
+**Does Shellyard use my `~/.ssh/config`?**
+Yes. Shellyard runs `/usr/bin/ssh`, so everything in your SSH configuration
 applies: host aliases, keys, certificates, FIDO keys, the agent, and
 `known_hosts`.
 
-**Why does Termora write a file in `~/.terminfo` on my servers?**
+**Why does Shellyard write a file in `~/.terminfo` on my servers?**
 Ghostty says that its terminal type is `xterm-ghostty`, and most servers do
 not know that name. Without the description, `htop`, `vim`, and `less` stop
-with `Error opening terminal`. Termora installs the description one time, in
-`~/.terminfo/78/xterm-ghostty`. If a server cannot accept it, Termora uses
+with `Error opening terminal`. Shellyard installs the description one time, in
+`~/.terminfo/78/xterm-ghostty`. If a server cannot accept it, Shellyard uses
 `xterm-256color` for that server.
 
 **How do I use the same bookmarks on two Macs?**
 Put the document in a folder that you sync, such as iCloud Drive, and open
 it on the other Mac with **Open a document…** and the same master password.
 
-**Termora asks for things again after the update to 1.1.1. Why?**
+**Shellyard asked for things again after the update to 1.1.1. Why?**
 1.1.1 is the first version signed with a Developer ID, and macOS sees a new
 signature as a new application. It can ask one more time for permission to
 control Royal TSX during an import. If Touch ID stops opening the document,
@@ -310,14 +310,26 @@ one.
 Every session and every tunnel closes, local shells too. Nothing stays open
 behind a locked document.
 
-**Why must I type the full Homebrew name?**
-The main Homebrew cask repository has a different application that is also
-called "termora". With the short name, Homebrew installs or upgrades that
-application.
+**Why is Termora now called Shellyard?**
+Another terminal application has the name Termora, and the main Homebrew
+cask repository has its cask. Shellyard has your bookmarks, your settings,
+and your Touch ID key, and it opens your `.termora` documents as before.
+
+To move a Homebrew install of Termora to Shellyard:
+
+```bash
+brew uninstall --cask fballiano/termora/termora
+brew install --cask fballiano/tap/shellyard
+brew untap fballiano/termora
+```
+
+The uninstall removes the application only. Your documents and settings
+stay. The command is now `shellyard`, so change `termora` in your scripts and
+in the permissions of your AI agents.
 
 ## Development
 
-See [Docs/DEVELOPMENT.md](Docs/DEVELOPMENT.md) to build Termora, run the
+See [Docs/DEVELOPMENT.md](Docs/DEVELOPMENT.md) to build Shellyard, run the
 tests, and read about its design.
 
 ## Licence

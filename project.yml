@@ -64,8 +64,12 @@ targets:
           destination: executables
     settings:
       base:
+        # The app is called Shellyard. The bundle identifier and the Swift
+        # module keep the old name, Termora, on purpose: macOS keys the
+        # settings, the permissions, and the Touch ID key by the identifier.
         PRODUCT_BUNDLE_IDENTIFIER: com.fabrizioballiano.Termora
-        PRODUCT_NAME: Termora
+        PRODUCT_NAME: Shellyard
+        PRODUCT_MODULE_NAME: Termora
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_FILE: Termora/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Termora/Resources/Termora.entitlements
@@ -97,10 +101,11 @@ targets:
       - path: Packages/TermoraSSH/Sources/TermoraSSH/AgentProtocol.swift
     settings:
       base:
-        # Not "termora": the disk is case-insensitive, so a tool named
-        # `termora` in Contents/MacOS overwrites the app binary `Termora`
-        # and the application stops launching.
-        PRODUCT_NAME: termora-cli
+        # Not "shellyard": the disk is case-insensitive, so a tool named
+        # `shellyard` in Contents/MacOS overwrites the app binary
+        # `Shellyard` and the application stops launching. The cask links
+        # it as `shellyard`.
+        PRODUCT_NAME: shellyard-cli
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
         SKIP_INSTALL: YES

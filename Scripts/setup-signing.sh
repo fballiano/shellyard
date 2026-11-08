@@ -201,7 +201,7 @@ finish() {
 # Release signing. Sets up what .github/workflows/release.yml needs to sign
 # with Developer ID and to notarize, in one or more repositories:
 #
-#   ./Scripts/setup-signing.sh                         fballiano/termora
+#   ./Scripts/setup-signing.sh                         fballiano/shellyard
 #   ./Scripts/setup-signing.sh owner/app1 owner/app2   those repositories
 #
 # Nothing is written to disk: every value goes straight into GitHub secrets,
@@ -313,7 +313,7 @@ has_developer_id() {
 run_wizard() {
 
 REPOS=("$@")
-(( ${#REPOS[@]} )) || REPOS=("fballiano/termora")
+(( ${#REPOS[@]} )) || REPOS=("fballiano/shellyard")
 
 # Every stage waits for Enter. Without a terminal, `read` gets end-of-input
 # at once and a wait loop spins for ever, so stop here instead.

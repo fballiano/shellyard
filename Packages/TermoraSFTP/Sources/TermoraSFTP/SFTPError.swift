@@ -25,13 +25,13 @@ public enum SFTPError: Error, LocalizedError, Equatable {
         case let .malformedPacket(detail):
             return "The far host sent something this client could not read. \(detail)"
         case let .unsupportedVersion(version):
-            return "The far host speaks SFTP version \(version). Termora speaks version 3."
+            return "The far host speaks SFTP version \(version). Shellyard speaks version 3."
         case .channelClosed:
             return "The SFTP channel closed."
         case let .timedOut(what):
             return "The far host did not answer. \(what)"
         case let .cannotReadLocalFile(path):
-            return "Termora could not read \(path)."
+            return "Shellyard could not read \(path)."
         }
     }
 

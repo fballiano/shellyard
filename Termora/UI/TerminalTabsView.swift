@@ -337,7 +337,7 @@ private struct TabContent: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 32))
                     .foregroundStyle(.orange)
-                Text("Termora could not connect to \(tab.name).")
+                Text("Shellyard could not connect to \(tab.name).")
                 Text(reason)
                     .font(.footnote)
                     .foregroundStyle(.secondary)

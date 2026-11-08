@@ -24,7 +24,7 @@ struct RootView: View {
             }
         }
         .alert(
-            "Termora",
+            "Shellyard",
             isPresented: Binding(
                 get: {
                     store.errorMessage != nil || sessions.errorMessage != nil
@@ -89,7 +89,7 @@ struct RootView: View {
             }
             Button("Cancel", role: .cancel) { remoteEdits.conflicted = nil }
         } message: {
-            Text("The file changed on the far host after Termora copied it. "
+            Text("The file changed on the far host after Shellyard copied it. "
                 + "Overwrite replaces those changes with your saved copy. "
                 + "Cancel keeps both files as they are; the next save asks again.")
         }

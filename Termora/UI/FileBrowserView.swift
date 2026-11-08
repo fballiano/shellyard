@@ -32,7 +32,7 @@ struct FileBrowserView: View {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 30))
                             .foregroundStyle(.orange)
-                        Text("Termora could not open the files.")
+                        Text("Shellyard could not open the files.")
                         Text(reason)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -64,7 +64,7 @@ struct FileBrowserView: View {
         }
         .task { await model.open() }
         .onDisappear { model.close() }
-        .alert("Termora", isPresented: Binding(
+        .alert("Shellyard", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
         )) {
@@ -370,7 +370,7 @@ private struct LocalPane: View {
                 model.makeFolder(named: name)
             }
         }
-        .alert("Termora", isPresented: Binding(
+        .alert("Shellyard", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
         )) {

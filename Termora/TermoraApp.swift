@@ -222,7 +222,7 @@ struct TermoraApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Termora") {
+        WindowGroup("Shellyard") {
             RootView()
                 .environmentObject(store)
                 .environmentObject(sessions)

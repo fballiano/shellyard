@@ -191,7 +191,7 @@ public struct RoyalImporter {
         }
         if !object.string("KeySequence").isEmpty, !object.bool("KeySequenceEnabled") {
             report.note(name, "A key sequence was switched off in Royal TSX. "
-                        + "Termora left it off. The text is in the notes.")
+                        + "Shellyard left it off. The text is in the notes.")
         }
 
         // Termora runs a task before connecting. It does not run one after
@@ -200,7 +200,7 @@ public struct RoyalImporter {
         if !afterName.isEmpty || RoyalImporter.isRealIdentifier(object.string("PostDisconnectTaskId")) {
             let shown = afterName.isEmpty ? "a task" : "the task \"\(afterName)\""
             report.note(name, "Royal TSX runs \(shown) after disconnecting. "
-                        + "Termora does not run a command after disconnecting.")
+                        + "Shellyard does not run a command after disconnecting.")
         }
 
         return connection
@@ -289,7 +289,7 @@ public struct RoyalImporter {
         guard let task = tasks.preConnectTask(for: object) else {
             let shown = wantedName.isEmpty ? "a task" : "the task \"\(wantedName)\""
             report.note(name, "Royal TSX runs \(shown) before connecting. "
-                        + "Termora did not find its commands in the Royal TSX settings "
+                        + "Shellyard did not find its commands in the Royal TSX settings "
                         + "file, so it did not import the task.")
             return .inherit
         }
@@ -299,7 +299,7 @@ public struct RoyalImporter {
         let full = task.commandLine + " " + task.arguments
         if CommandPlaceholders.containsSecretMark(full) {
             report.note(name, "The task \"\(task.name)\" puts a password on its "
-                        + "command line. Termora did not import it, because a command "
+                        + "command line. Shellyard did not import it, because a command "
                         + "line is readable by every program on this Mac.")
             return .inherit
         }
@@ -349,11 +349,11 @@ public struct RoyalImporter {
                     report.needsSecret(name, "Royal TSX did not hand over the password. Type it in.")
                 }
                 report.note(name, "This entry also used the key \(keyPath). "
-                            + "Termora kept the password. Change the method if you prefer the key.")
+                            + "Shellyard kept the password. Change the method if you prefer the key.")
                 return .password(Secret(password))
             case .keepPrivateKey:
                 report.note(name, "This entry also had a stored password. "
-                            + "Termora kept the key \(keyPath). Type the password in if you need it.")
+                            + "Shellyard kept the key \(keyPath). Type the password in if you need it.")
                 return .privateKey(path: keyPath, passphrase: Secret(passphrase))
             }
         }

@@ -38,7 +38,7 @@ final class AgentGateway: ObservableObject {
         do {
             let service = try AgentService()
             service.responder = { [weak self] request in
-                guard let self else { return .refused("Termora is closing.") }
+                guard let self else { return .refused("Shellyard is closing.") }
                 return await self.handle(request)
             }
             try service.start()
@@ -49,7 +49,7 @@ final class AgentGateway: ObservableObject {
         } catch {
             // The window works without the socket, so say so instead of
             // standing in the way of the unlock.
-            store.errorMessage = "Termora could not open the agent socket. "
+            store.errorMessage = "Shellyard could not open the agent socket. "
                 + error.localizedDescription
         }
     }
@@ -112,7 +112,7 @@ final class AgentGateway: ObservableObject {
         guard matches.count == 1 else {
             return .refused(
                 "\(matches.count) bookmarks are named \"\(name)\". "
-                    + "Use the full name that `termora list` prints."
+                    + "Use the full name that `shellyard list` prints."
             )
         }
         switch await sessions.establish(connection) {

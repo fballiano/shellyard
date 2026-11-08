@@ -1,27 +1,27 @@
 # Agent integrations
 
-Each folder here teaches one AI agent to drive Termora with the bundled
-`termora` command. Every file is plain text. None of them holds a secret,
-and none of them changes how Termora works.
+Each folder here teaches one AI agent to drive Shellyard with the bundled
+`shellyard` command. Every file is plain text. None of them holds a secret,
+and none of them changes how Shellyard works.
 
-The command itself is the contract. Run `termora --help` to read it. An
+The command itself is the contract. Run `shellyard --help` to read it. An
 agent that reads help needs nothing from this folder.
 
 | Path | Agent | How the user installs it |
 |---|---|---|
-| `../plugins/termora` | Claude Code | `/plugin marketplace add fballiano/termora`, then `/plugin install termora@termora` |
+| `../plugins/shellyard` | Claude Code | `/plugin marketplace add fballiano/shellyard`, then `/plugin install shellyard@shellyard` |
 | `AGENTS.snippet.md` | Codex, Amp, Zed, and others | Paste the block into the project `AGENTS.md`, or into `~/.codex/AGENTS.md` |
-| `gemini/GEMINI.md` | Gemini CLI | `gemini extensions install https://github.com/fballiano/termora` |
-| `cursor/termora.mdc` | Cursor | Copy the file into `.cursor/rules/` or into `~/.cursor/rules/` |
+| `gemini/GEMINI.md` | Gemini CLI | `gemini extensions install https://github.com/fballiano/shellyard` |
+| `cursor/shellyard.mdc` | Cursor | Copy the file into `.cursor/rules/` or into `~/.cursor/rules/` |
 
 Cursor reads `AGENTS.md` too. The rule file is better: it carries a
 description, so Cursor loads the text only when the work needs a server.
 
 ## Permission
 
-An agent runs `termora` through its shell tool. Most agents block a new
+An agent runs `shellyard` through its shell tool. Most agents block a new
 command until the user allows it. In Claude Code the permission is
-`Bash(termora:*)`. Each agent names it differently, so read the agent's own
+`Bash(shellyard:*)`. Each agent names it differently, so read the agent's own
 documentation.
 
 ## Keep the files together
