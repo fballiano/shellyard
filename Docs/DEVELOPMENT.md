@@ -447,6 +447,11 @@ and runs the schedule. `Document.applySync` (in ShellyardModel, with
   out by the person: it loses its link, and its `id` is excluded too. A node
   whose parent no longer exists is not "outside": the sync places it again.
   The children of an excluded folder are still read, and take its place.
+- **Order.** Synced nodes take the order of the file. Before the sync,
+  `rememberLocalPlaces` notes the synced nodes above each node of the
+  person. After it, that node goes below the nearest of them that is still
+  in the same folder, or to the top when there is none. A node that is new
+  in the folder goes to the end.
 - **Detached nodes.** `releaseDetachedSyncedNodes` runs after each
   `DocumentStore.update` and when a document opens. It clears the link of a
   node that is outside its synced folder (and excludes its `id`), and of a

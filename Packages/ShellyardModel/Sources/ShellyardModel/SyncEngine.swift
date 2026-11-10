@@ -133,6 +133,9 @@ struct SyncEngine {
     private var listedAnything = false
     /// The synced children of each parent, in the order of the file.
     private var syncedOrder: [UUID: [UUID]] = [:]
+    /// For each node that the person added, its folder and the synced nodes
+    /// above it in that folder before the sync, nearest last.
+    private var localPlaces: [UUID: (parent: UUID, syncedAbove: [UUID])] = [:]
 
     init(document: Document, rootID: UUID) {
         self.document = document
@@ -148,6 +151,7 @@ struct SyncEngine {
         excluded = Set(sync.excludedIDs)
 
         collectExistingNodes()
+        rememberLocalPlaces()
         let existingCount = existingFolders.count + existingConnections.count
 
         if let reason = file.settingsProblem {
@@ -550,8 +554,27 @@ struct SyncEngine {
 
     // MARK: - Order
 
+    /// Notes where the person put their own nodes among the synced ones.
+    private mutating func rememberLocalPlaces() {
+        let index = DocumentIndex(document)
+        let synced = Set(existingFolders.values).union(existingConnections.values)
+        for parent in [rootID] + Array(existingFolders.values) {
+            var syncedAbove: [UUID] = []
+            for child in index.children(of: parent).map(\.id) {
+                if synced.contains(child) {
+                    syncedAbove.append(child)
+                } else {
+                    localPlaces[child] = (parent, syncedAbove)
+                }
+            }
+        }
+    }
+
     /// In each parent that the sync filled: the synced nodes in the order of
-    /// the file, then the nodes that the person added, in their own order.
+    /// the file. A node that the person added stays below the same synced
+    /// node as before; when that node is gone, below the nearest one above
+    /// it that is still there. A node above every synced node stays at the
+    /// top. A node that is new in this folder goes to the end.
     private mutating func renumber() {
         let index = DocumentIndex(document)
         var parents = Set(syncedOrder.keys)
@@ -559,8 +582,22 @@ struct SyncEngine {
         for parent in parents {
             let synced = syncedOrder[parent] ?? []
             let syncedSet = Set(synced)
-            let local = index.children(of: parent).map(\.id).filter { !syncedSet.contains($0) }
-            for (position, id) in (synced + local).enumerated() {
+            var atTop: [UUID] = []
+            var below: [UUID: [UUID]] = [:]
+            var atEnd: [UUID] = []
+            for id in index.children(of: parent).map(\.id) where !syncedSet.contains(id) {
+                guard let place = localPlaces[id], place.parent == parent else {
+                    atEnd.append(id)
+                    continue
+                }
+                if let anchor = place.syncedAbove.last(where: syncedSet.contains) {
+                    below[anchor, default: []].append(id)
+                } else {
+                    atTop.append(id)
+                }
+            }
+            let order = atTop + synced.flatMap { [$0] + (below[$0] ?? []) } + atEnd
+            for (position, id) in order.enumerated() {
                 if let at = document.folders.firstIndex(where: { $0.id == id }) {
                     document.folders[at].position = position
                 } else if let at = document.connections.firstIndex(where: { $0.id == id }) {

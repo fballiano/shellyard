@@ -328,7 +328,8 @@ How a sync works:
   the folder, the sync does not add it again. If you delete a synced folder,
   the entries in it that the list still has move to the top of the synced
   folder. In the folder editor, **Bring Them Back** cancels this.
-- **The place and the order** of synced entries follow the list.
+- **The place and the order** of synced entries follow the list. An entry
+  that you add keeps its place: at the top, or below the same synced entry.
 - **The list can set the settings of the synced folder,** for example one
   user name for all its servers. If you change one of these settings on the
   folder, your value stays. Settings that the list does not send, such as

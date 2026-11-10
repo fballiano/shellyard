@@ -183,11 +183,11 @@ func methodChange() {
 
 // MARK: - Nodes of the person
 
-@Test("A node added by hand is never changed or removed, and comes after the synced ones")
+@Test("A node added by hand is never changed or removed")
 func handMadeNodesStay() throws {
     var fixture = Fixture()
     try fixture.document.applySync(file(firstList), toFolder: fixture.fleetID)
-    let mine = Connection(parentID: fixture.fleetID, name: "mine", position: 0, host: "my.host")
+    let mine = Connection(parentID: fixture.fleetID, name: "mine", position: 99, host: "my.host")
     fixture.document.add(mine)
 
     try fixture.document.applySync(file("""
@@ -622,4 +622,58 @@ func syncOffReleases() throws {
     fixture.document.releaseDetachedSyncedNodes()
     #expect(fixture.document.connections.allSatisfy { $0.syncLink == nil })
     #expect(fixture.document.folders.allSatisfy { $0.syncLink == nil })
+}
+
+// MARK: - The place of the entries that the person added
+
+private let threeServers = """
+[
+  { "type": "connection", "id": "a", "name": "a", "host": "a" },
+  { "type": "connection", "id": "b", "name": "b", "host": "b" },
+  { "type": "connection", "id": "c", "name": "c", "host": "c" }
+]
+"""
+
+@Test("Entries added by hand keep their place among the synced ones")
+func handMadeNodesKeepTheirPlace() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(threeServers), toFolder: fixture.fleetID)
+    // a=0, b=1, c=2. "top" goes above a, "middle" between a and b.
+    fixture.document.add(Connection(parentID: fixture.fleetID, name: "top", position: -1, host: "t"))
+    fixture.document.add(Connection(parentID: fixture.fleetID, name: "middle", position: 1, host: "m"))
+    let at = try #require(fixture.document.connections.firstIndex { $0.name == "b" })
+    fixture.document.connections[at].position = 2
+    let atC = try #require(fixture.document.connections.firstIndex { $0.name == "c" })
+    fixture.document.connections[atC].position = 3
+    #expect(fixture.childNames(of: fixture.fleetID) == ["top", "a", "middle", "b", "c"])
+
+    try fixture.document.applySync(file(threeServers), toFolder: fixture.fleetID)
+    #expect(fixture.childNames(of: fixture.fleetID) == ["top", "a", "middle", "b", "c"])
+
+    // The list adds "new" after a, and removes a. "middle" moves up to the
+    // nearest synced entry above it that is still there: none, so the top.
+    try fixture.document.applySync(file("""
+    [
+      { "type": "connection", "id": "new", "name": "new", "host": "n" },
+      { "type": "connection", "id": "b", "name": "b", "host": "b" },
+      { "type": "connection", "id": "c", "name": "c", "host": "c" }
+    ]
+    """), toFolder: fixture.fleetID)
+    #expect(fixture.childNames(of: fixture.fleetID) == ["top", "middle", "new", "b", "c"])
+}
+
+@Test("An entry added by hand below a synced entry stays below it when the list reorders")
+func handMadeNodeFollowsItsSyncedNeighbour() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(threeServers), toFolder: fixture.fleetID)
+    fixture.document.add(Connection(parentID: fixture.fleetID, name: "after-c", position: 99, host: "x"))
+
+    try fixture.document.applySync(file("""
+    [
+      { "type": "connection", "id": "c", "name": "c", "host": "c" },
+      { "type": "connection", "id": "a", "name": "a", "host": "a" },
+      { "type": "connection", "id": "b", "name": "b", "host": "b" }
+    ]
+    """), toFolder: fixture.fleetID)
+    #expect(fixture.childNames(of: fixture.fleetID) == ["c", "after-c", "a", "b"])
 }
