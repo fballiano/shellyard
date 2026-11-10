@@ -78,7 +78,8 @@ opens like any other application.
 1. Start Shellyard and select **Create a document…**. Choose where to keep the
    file and a master password.
 2. Add your servers: ⌘N for a connection, ⇧⌘N for a folder. From Royal TSX,
-   select **File → Import from Royal TSX…** instead.
+   select **File → Import from Royal TSX…** instead. From an export file,
+   select **File → Import Connections…**.
 3. Double-click a connection to open it.
 4. Press ⇧⌘T, or select **Local Shell** at the top of the sidebar, for a
    shell on your Mac.
@@ -259,6 +260,43 @@ agent. For a fixed setup, install the instructions for your agent:
 
 In Claude Code, allow the command with the permission `Bash(shellyard:*)`.
 
+### Exporting and importing connections
+
+You can move connections between documents, between Macs, or to another
+person, with a JSON file.
+
+To export:
+
+- **All connections:** select **File → Export All Connections…**.
+- **One folder, with everything in it:** right-click the folder, then select
+  **Export…**.
+- **One connection:** right-click the connection, then select **Export…**.
+
+A folder or a connection often takes settings from the folders above it, for
+example the user name or the jump host. The export writes these settings
+into the file, so the connections work the same after the import.
+
+**Passwords.** The export leaves out the passwords and the passphrases,
+unless you turn on **Include passwords and passphrases**. The file is plain
+text, so anybody who can read it can read these passwords. Shellyard makes
+the file readable only by your user account. Delete the file after the
+import.
+
+To import, select **File → Import Connections…** and choose the file:
+
+- **Add to** selects where the connections go: the top level or a folder.
+  The preview shows the result before anything changes.
+- The preview marks each connection that needs a password, and each entry
+  that Shellyard cannot read.
+- **Commands before connecting** run a program on your Mac. The import
+  removes them, unless you turn on **Keep the commands that run on this
+  Mac**. Turn it on only when you trust the file.
+- Nothing that is already in the document is removed. An import of the same
+  file two times adds the connections two times.
+
+[Docs/CONNECTIONS-FORMAT.md](Docs/CONNECTIONS-FORMAT.md) describes the
+format, if you want to make the file with a script.
+
 ### Importing from Royal TSX
 
 **File → Import from Royal TSX…** adds the folders and connections of an
@@ -312,8 +350,7 @@ behind a locked document.
 
 **Why is Termora now called Shellyard?**
 Another terminal application has the name Termora, and the main Homebrew
-cask repository has its cask. Shellyard has your bookmarks, your settings,
-and your Touch ID key, and it opens your `.termora` documents as before.
+cask repository has its cask.
 
 To move a Homebrew install of Termora to Shellyard:
 
@@ -326,6 +363,20 @@ brew untap fballiano/termora
 The uninstall removes the application only. Your documents and settings
 stay. The command is now `shellyard`, so change `termora` in your scripts and
 in the permissions of your AI agents.
+
+**How do I open a `.termora` document?**
+Shellyard opens only `.shellyard` documents. Do these steps one time:
+
+1. Quit Shellyard.
+2. In the Finder, change the extension of the document from `.termora` to
+   `.shellyard`.
+3. Open the document in Shellyard, and type the master password.
+4. If you used Touch ID, turn it on again in Settings.
+
+The first time it starts, Shellyard copies your settings from the old
+Termora application. The first save writes the document in the new format.
+After that, a version of Shellyard that is older than 1.4.0 cannot open the
+document. Update Shellyard on each Mac that shares the document.
 
 ## Development
 

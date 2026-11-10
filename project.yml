@@ -1,4 +1,4 @@
-name: Termora
+name: Shellyard
 
 options:
   bundleIdPrefix: com.fabrizioballiano
@@ -11,16 +11,16 @@ packages:
   GhosttyKit:
     url: https://github.com/Lakr233/libghostty-spm
     exactVersion: 2.2.2026103001
-  TermoraModel:
-    path: Packages/TermoraModel
-  TermoraVault:
-    path: Packages/TermoraVault
-  TermoraSSH:
-    path: Packages/TermoraSSH
-  TermoraImport:
-    path: Packages/TermoraImport
-  TermoraSFTP:
-    path: Packages/TermoraSFTP
+  ShellyardModel:
+    path: Packages/ShellyardModel
+  ShellyardVault:
+    path: Packages/ShellyardVault
+  ShellyardSSH:
+    path: Packages/ShellyardSSH
+  ShellyardImport:
+    path: Packages/ShellyardImport
+  ShellyardSFTP:
+    path: Packages/ShellyardSFTP
 
 settings:
   base:
@@ -32,47 +32,45 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 targets:
-  Termora:
+  Shellyard:
     type: application
     platform: macOS
     sources:
-      - path: Termora
+      - path: Shellyard
     dependencies:
       - package: GhosttyKit
         product: GhosttyTerminal
       - package: GhosttyKit
         product: GhosttyTheme
-      - package: TermoraModel
-        product: TermoraModel
-      - package: TermoraVault
-        product: TermoraVault
-      - package: TermoraSSH
-        product: TermoraSSH
-      - package: TermoraImport
-        product: TermoraImport
-      - package: TermoraSFTP
-        product: TermoraSFTP
-      - target: termora-askpass
+      - package: ShellyardModel
+        product: ShellyardModel
+      - package: ShellyardVault
+        product: ShellyardVault
+      - package: ShellyardSSH
+        product: ShellyardSSH
+      - package: ShellyardImport
+        product: ShellyardImport
+      - package: ShellyardSFTP
+        product: ShellyardSFTP
+      - target: shellyard-askpass
         embed: true
         codeSign: true
         copy:
           destination: executables
-      - target: termora-cli
+      - target: shellyard-cli
         embed: true
         codeSign: true
         copy:
           destination: executables
     settings:
       base:
-        # The app is called Shellyard. The bundle identifier and the Swift
-        # module keep the old name, Termora, on purpose: macOS keys the
-        # settings, the permissions, and the Touch ID key by the identifier.
-        PRODUCT_BUNDLE_IDENTIFIER: com.fabrizioballiano.Termora
+        # Until 1.4.0 the identifier was com.fabrizioballiano.Termora, the
+        # old name of the app. LegacyMigration copies its settings.
+        PRODUCT_BUNDLE_IDENTIFIER: com.fabrizioballiano.Shellyard
         PRODUCT_NAME: Shellyard
-        PRODUCT_MODULE_NAME: Termora
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        INFOPLIST_FILE: Termora/Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Termora/Resources/Termora.entitlements
+        INFOPLIST_FILE: Shellyard/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Shellyard/Resources/Shellyard.entitlements
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""
@@ -80,25 +78,25 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
 
-  termora-askpass:
+  shellyard-askpass:
     type: tool
     platform: macOS
     sources:
-      - path: Tools/termora-askpass/main.swift
-      - path: Packages/TermoraSSH/Sources/TermoraSSH/AskpassClient.swift
+      - path: Tools/shellyard-askpass/main.swift
+      - path: Packages/ShellyardSSH/Sources/ShellyardSSH/AskpassClient.swift
     settings:
       base:
-        PRODUCT_NAME: termora-askpass
+        PRODUCT_NAME: shellyard-askpass
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
         SKIP_INSTALL: YES
 
-  termora-cli:
+  shellyard-cli:
     type: tool
     platform: macOS
     sources:
-      - path: Tools/termora-cli/main.swift
-      - path: Packages/TermoraSSH/Sources/TermoraSSH/AgentProtocol.swift
+      - path: Tools/shellyard-cli/main.swift
+      - path: Packages/ShellyardSSH/Sources/ShellyardSSH/AgentProtocol.swift
     settings:
       base:
         # Not "shellyard": the disk is case-insensitive, so a tool named
@@ -110,45 +108,45 @@ targets:
         CODE_SIGN_STYLE: Manual
         SKIP_INSTALL: YES
 
-  TermoraUITests:
+  ShellyardUITests:
     type: bundle.ui-testing
     platform: macOS
     sources:
-      - path: TermoraUITests
+      - path: ShellyardUITests
     dependencies:
-      - target: Termora
-      - package: TermoraModel
-        product: TermoraModel
-      - package: TermoraVault
-        product: TermoraVault
-      - package: TermoraSSH
-        product: TermoraSSH
-      - package: TermoraImport
-        product: TermoraImport
-      - package: TermoraSFTP
-        product: TermoraSFTP
-      - target: termora-askpass
+      - target: Shellyard
+      - package: ShellyardModel
+        product: ShellyardModel
+      - package: ShellyardVault
+        product: ShellyardVault
+      - package: ShellyardSSH
+        product: ShellyardSSH
+      - package: ShellyardImport
+        product: ShellyardImport
+      - package: ShellyardSFTP
+        product: ShellyardSFTP
+      - target: shellyard-askpass
         embed: true
         codeSign: true
         copy:
           destination: executables
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.fabrizioballiano.TermoraUITests
+        PRODUCT_BUNDLE_IDENTIFIER: com.fabrizioballiano.ShellyardUITests
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
-        TEST_TARGET_NAME: Termora
+        TEST_TARGET_NAME: Shellyard
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  Termora:
+  Shellyard:
     build:
       targets:
-        Termora: all
-        TermoraUITests: [test]
+        Shellyard: all
+        ShellyardUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - TermoraUITests
+        - ShellyardUITests

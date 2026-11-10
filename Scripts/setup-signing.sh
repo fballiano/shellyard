@@ -205,7 +205,7 @@ finish() {
 #   ./Scripts/setup-signing.sh owner/app1 owner/app2   those repositories
 #
 # Nothing is written to disk: every value goes straight into GitHub secrets,
-# as Termora never keeps a secret in a file. GitHub never gives a secret back,
+# as Shellyard never keeps a secret in a file. GitHub never gives a secret back,
 # so another repository needs this run again, not a copy.
 TEAM_ID="H95XQBELRP"
 REPOS=()

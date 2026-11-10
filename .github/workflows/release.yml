@@ -93,7 +93,7 @@ jobs:
       - name: Build and sign
         run: |
           xcodegen generate
-          xcodebuild -project Termora.xcodeproj -scheme Termora \
+          xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
                      -configuration Release \
                      -destination 'platform=macOS,arch=arm64' \
                      -derivedDataPath build \
@@ -131,12 +131,12 @@ jobs:
         run: |
           "$APP/Contents/MacOS/shellyard-cli" --help > /dev/null
           set +e
-          "$APP/Contents/MacOS/termora-askpass" probe < /dev/null
+          "$APP/Contents/MacOS/shellyard-askpass" probe < /dev/null
           STATUS=$?
           set -e
           # With no socket to ask, the helper exits 1. 128 and up is a signal.
           if [ $STATUS -ge 128 ]; then
-            echo "::error::termora-askpass was killed at launch (exit $STATUS)"
+            echo "::error::shellyard-askpass was killed at launch (exit $STATUS)"
             exit 1
           fi
 

@@ -3,26 +3,28 @@
 This document is for people who change the code. For the use of the
 application, see the [README](../README.md).
 
-## The two names
+## The old name
 
-The application is called **Shellyard**. Until version 1.2.0 it was called
-Termora, and the code keeps that name: the Xcode project, the scheme, the
-packages (`TermoraModel` and the others), the Swift module, the types, and
-the comments. Do not rename them.
+Until version 1.2.0 the application was called Termora. Until version 1.4.0
+the code, the bundle identifier, the settings keys, the folders, and the
+document extension kept that name. Now everything says Shellyard.
 
-These keep the old name on purpose, because existing installs depend on them:
+Two places still know the old name, so that old data comes across:
 
-- The bundle identifier `com.fabrizioballiano.Termora`. macOS keys the
-  settings, the permissions, and the Touch ID key by it.
-- The `UserDefaults` keys (`TermoraLastDocumentPath` and the others).
-- The folders `~/Library/Application Support/Termora` and
-  `~/Library/Caches/Termora`.
-- The string `"Termora document key"` in `VaultKeyStore`. It is part of the
-  key derivation, and a change makes every remembered Touch ID key useless.
-- The `.termora` document extension and its type identifiers.
+- `LegacyMigration` runs once, at the first launch. It copies the settings of
+  `com.fabrizioballiano.Termora` to the `Shellyard…` keys. It also renames the
+  `Termora` folders in `~/Library/Application Support` and
+  `~/Library/Caches`, when no `Shellyard` folder is there.
+- `VaultFile` reads a document that starts with `TERMORA1`. Each save writes
+  `SHELLYARD1`.
 
-Everything that a person reads says Shellyard: the application name, the
-messages, the `shellyard` command, the release zip, and the cask.
+Shellyard opens only `.shellyard` documents. A person renames an old
+`.termora` document in the Finder; the README tells how. A Touch ID record
+belongs to the path of the document, so the person turns Touch ID on again
+after the rename.
+
+Do not remove the migration code. A person can update from any older
+version.
 
 ## Requirements
 
@@ -37,34 +39,34 @@ messages, the `shellyard` command, the release zip, and the cask.
 ./run.sh --install    # also copy it to /Applications and link `shellyard`
 ```
 
-`./run.sh` quits every running Termora before it starts the new build.
+`./run.sh` quits every running Shellyard before it starts the new build.
 
 Or by hand:
 
 ```sh
 xcodegen generate
-xcodebuild -project Termora.xcodeproj -scheme Termora \
+xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
            -configuration Debug -derivedDataPath build build
 open build/Build/Products/Debug/Shellyard.app
 ```
 
-`Termora.xcodeproj` is generated. Do not edit it. Change `project.yml` and
+`Shellyard.xcodeproj` is generated. Do not edit it. Change `project.yml` and
 run `xcodegen generate` again.
 
 ## Layout
 
 | Path | Purpose |
 |---|---|
-| `Termora/Terminal` | The only code that calls libghostty |
-| `Termora/Sessions` | Tabs, panes, and splits (`SessionsController`) |
-| `Termora/UI` | Sidebar, tab bar, inspector, file browser |
-| `Packages/TermoraModel` | The object tree and folder inheritance |
-| `Packages/TermoraVault` | The encrypted document and the Touch ID key store |
-| `Packages/TermoraSSH` | The control master, the askpass service, and tunnels |
-| `Packages/TermoraImport` | The Royal TSX reader and the AppleScript bridge |
-| `Packages/TermoraSFTP` | The SFTP version 3 client and the file browser model |
-| `TermoraUITests` | Tests that drive the real application |
-| `Tools/` | The `termora-askpass` helper and the `shellyard` command (`Tools/termora-cli`) |
+| `Shellyard/Terminal` | The only code that calls libghostty |
+| `Shellyard/Sessions` | Tabs, panes, and splits (`SessionsController`) |
+| `Shellyard/UI` | Sidebar, tab bar, inspector, file browser |
+| `Packages/ShellyardModel` | The object tree and folder inheritance |
+| `Packages/ShellyardVault` | The encrypted document and the Touch ID key store |
+| `Packages/ShellyardSSH` | The control master, the askpass service, and tunnels |
+| `Packages/ShellyardImport` | The Royal TSX reader and the AppleScript bridge |
+| `Packages/ShellyardSFTP` | The SFTP version 3 client and the file browser model |
+| `ShellyardUITests` | Tests that drive the real application |
+| `Tools/` | The `shellyard-askpass` helper and the `shellyard` command (`Tools/shellyard-cli`) |
 | `Agents/`, `plugins/` | The agent integrations, one folder per agent |
 
 A `TerminalTab` with no `connectionID` is a local shell tab.
@@ -74,22 +76,22 @@ A `TerminalTab` with no `connectionID` is a local shell tab.
 Each package is an independent SwiftPM package:
 
 ```sh
-(cd Packages/TermoraModel && swift test)
-(cd Packages/TermoraVault && swift test)
-(cd Packages/TermoraSSH && swift test)
-(cd Packages/TermoraSFTP && swift test)
-(cd Packages/TermoraImport && swift test)
+(cd Packages/ShellyardModel && swift test)
+(cd Packages/ShellyardVault && swift test)
+(cd Packages/ShellyardSSH && swift test)
+(cd Packages/ShellyardSFTP && swift test)
+(cd Packages/ShellyardImport && swift test)
 ```
 
 The UI tests drive the real application:
 
 ```sh
-xcodebuild -project Termora.xcodeproj -scheme Termora \
+xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
            -destination 'platform=macOS,arch=arm64' -derivedDataPath build test
 ```
 
 They write a document with the vault API, then start the application with
-`-TermoraLastDocumentPath <path>`. `UserDefaults` reads `-key value` pairs
+`-ShellyardLastDocumentPath <path>`. `UserDefaults` reads `-key value` pairs
 from the command line, so the application has no test-only code.
 
 Some UI tests need a live connection. `Scripts/uitest-ssh.sh` starts an
@@ -97,12 +99,12 @@ OpenSSH server on a high port in a temporary folder and gives its port and
 key to the tests. Without the script, those tests are skipped.
 
 ```sh
-./Scripts/uitest-ssh.sh TermoraUITests                     # every UI test
-./Scripts/uitest-ssh.sh TermoraUITests/TabShortcutsTests   # one class
+./Scripts/uitest-ssh.sh ShellyardUITests                     # every UI test
+./Scripts/uitest-ssh.sh ShellyardUITests/TabShortcutsTests   # one class
 ```
 
 The SSH package tests start their own OpenSSH server on a high port, in its
-own folder, and build `termora-askpass` from source. They read and write
+own folder, and build `shellyard-askpass` from source. They read and write
 nothing in your `~/.ssh`. They are skipped when `/usr/sbin/sshd` is missing.
 
 The SFTP tests talk to `/usr/libexec/sftp-server`, which macOS ships. It is
@@ -112,11 +114,11 @@ folder and removes it after.
 
 Two suites are opt-in:
 
-- `TERMORA_ROYAL_DOCUMENT=<path>` runs the import tests against a real
+- `SHELLYARD_ROYAL_DOCUMENT=<path>` runs the import tests against a real
   Royal TSX document. They only read it, and they check counts and shapes:
   no host name, no user name, and no secret is printed.
-- `TERMORA_TEST_ROYAL_BRIDGE=1 swift test --filter RoyalBridgeLiveTests`, in
-  `Packages/TermoraImport`, starts the real Royal TSX application.
+- `SHELLYARD_TEST_ROYAL_BRIDGE=1 swift test --filter RoyalBridgeLiveTests`, in
+  `Packages/ShellyardImport`, starts the real Royal TSX application.
 
 ## Release
 
@@ -169,7 +171,7 @@ the signing.
 
 ## How a connection works
 
-Termora never speaks the SSH protocol. It drives `/usr/bin/ssh`, so it
+Shellyard never speaks the SSH protocol. It drives `/usr/bin/ssh`, so it
 inherits `~/.ssh/config`, certificates, FIDO keys, agent support, and
 `known_hosts`.
 
@@ -188,14 +190,14 @@ keep the connection and its tunnels alive. A second tab on a live master
 does not run the command before connecting again and does not open the
 tunnels again.
 
-### Masters that outlive Termora
+### Masters that outlive Shellyard
 
-A master is a process of its own, so it can outlive the application. Termora
+A master is a process of its own, so it can outlive the application. Shellyard
 closes every master on each lock and on each quit, also the masters of
 `shellyard run`, which have no tab. Every lock path goes through
 `DocumentStore.willClose`, which calls `SessionsController.closeEverything()`.
 
-A crash or Force Quit gives Termora no chance to close anything. The masters
+A crash or Force Quit gives Shellyard no chance to close anything. The masters
 then run on under launchd, with their connections and tunnels, and a master
 that died leaves its socket file, which stops a new master from binding that
 path. At launch, `SSHEngine.clearLeftoverMasters()` looks at every
@@ -203,7 +205,7 @@ path. At launch, `SSHEngine.clearLeftoverMasters()` looks at every
 
 - No master answers `ssh -O check`: the file is removed.
 - The master is `ssh` and its parent is launchd (PID 1): it gets `-O exit`.
-- The master has a live parent: it belongs to a copy of Termora that runs
+- The master has a live parent: it belongs to a copy of Shellyard that runs
   now, and it is left alone.
 
 The first connect waits for this work to end.
@@ -211,7 +213,7 @@ The first connect waits for this work to end.
 ### When the master stops
 
 `SSHConnection.onLost` fires when the master exits while it was connected
-and Termora did not close it. The panes and channels on the master stop with
+and Shellyard did not close it. The panes and channels on the master stop with
 it. `SessionsController` sets `lostReason` on every tab of that connection;
 the phase stays `ready`, so the panes stay in the view tree, and the bar is an
 overlay. Ghostty asks to close a finished pane on any key press, and the
@@ -240,17 +242,17 @@ it from inside the remote shell.
 Ghostty calls itself `xterm-ghostty`. OpenSSH copies `TERM` into the request
 for the remote terminal, and almost no server has that description.
 
-Termora puts the description on the server one time, as soon as the master
+Shellyard puts the description on the server one time, as soon as the master
 is up:
 
 ```
-infocmp -x xterm-ghostty                     from the description inside Termora
+infocmp -x xterm-ghostty                     from the description inside Shellyard
 ssh -S <socket> <host> sh -c '…tic -x -o "$HOME/.terminfo" -…'
 ```
 
 The work uses the control master, so nobody is asked for a password again. It
 writes one file, `~/.terminfo/78/xterm-ghostty`. A record in
-`~/Library/Caches/Termora/terminfo.json` stops Termora from doing it twice;
+`~/Library/Caches/Shellyard/terminfo.json` stops Shellyard from doing it twice;
 a new version of the description replaces the old one.
 
 A server with no `tic`, or with a read-only home folder, is left alone. The
@@ -261,27 +263,27 @@ server proved it understands.
 ### How a password reaches OpenSSH
 
 A secret never appears in a command line, in the environment, or in a file.
-Termora sets `SSH_ASKPASS` to `termora-askpass` and `SSH_ASKPASS_REQUIRE` to
+Shellyard sets `SSH_ASKPASS` to `shellyard-askpass` and `SSH_ASKPASS_REQUIRE` to
 `force`, which sends every question to the helper, also when a terminal is
-present. The helper holds no secret: it gives the prompt to Termora over a
+present. The helper holds no secret: it gives the prompt to Shellyard over a
 Unix socket in a private folder, with a random token for that one connection
 attempt, and prints the answer it receives.
 
-`Tools/termora-askpass/main.swift` and
-`Packages/TermoraSSH/Sources/TermoraSSH/AskpassClient.swift` are compiled into
+`Tools/shellyard-askpass/main.swift` and
+`Packages/ShellyardSSH/Sources/ShellyardSSH/AskpassClient.swift` are compiled into
 both the helper and the library, so the tool and the tests always speak the
 same version of the protocol.
 
 ## The document format
 
 ```
-"TERMORA1"        8 bytes
+"SHELLYARD1"      10 bytes ("TERMORA1", 8 bytes, in an old document)
 header length     4 bytes, big-endian
 header            JSON: format version, cipher, key derivation parameters
 body              AES-256-GCM: nonce, ciphertext, tag
 ```
 
-The header stays readable so that Termora can find the key derivation
+The header stays readable so that Shellyard can find the key derivation
 parameters before it asks for a password. Everything else, including every
 host name, is inside the sealed body. The header is the additional
 authenticated data, so a change to the salt or to the round count breaks the
@@ -290,8 +292,10 @@ seal.
 The master password becomes the key through PBKDF2-HMAC-SHA512 with 600,000
 rounds, which takes about 0.44 seconds on Apple silicon.
 
-A synced document can meet an older Termora on another Mac, so a change to
-the JSON must stay readable there. Termora 1.0 requires every field of a
+A synced document can meet an older Shellyard on another Mac, so a change to
+the JSON must stay readable there. A version older than 1.4.0 cannot read a
+document that starts with `SHELLYARD1`; that break came with the rename and
+is the only one. Shellyard 1.0 requires every field of a
 connection. A port that is not set is therefore written as `"port": 22`
 with `"portFromSSHConfig": true` beside it: 1.0 ignores the flag and uses
 22. `DocumentTests` decodes the new JSON with the 1.0 shape to prove it.
@@ -309,24 +313,24 @@ Enclave, which has no such rule:
 
 1. The Secure Enclave makes a private key guarded by `.biometryCurrentSet`.
    Its `dataRepresentation` is a sealed record that is useless on a different
-   Mac, so Termora keeps it in a plain file.
-2. Termora makes a second key pair, agrees a shared secret with the Secure
+   Mac, so Shellyard keeps it in a plain file.
+2. Shellyard makes a second key pair, agrees a shared secret with the Secure
    Enclave public key through ECDH, and drops its own private half.
 3. The document key is sealed with a key derived from that secret (HKDF over
    the document salt).
 
 Only the Secure Enclave can agree the secret again, and it asks for Touch ID
-first. Records live in `~/Library/Application Support/Termora/TouchID`, one
+first. Records live in `~/Library/Application Support/Shellyard/TouchID`, one
 file per document and salt, mode 0600.
 
-When Termora cannot remember a key, it tells the person. A quiet failure looks
+When Shellyard cannot remember a key, it tells the person. A quiet failure looks
 the same as success until the next launch asks for the password again.
 
 ## The file browser
 
-Termora speaks SFTP version 3 itself, on the channel that `ssh … -s sftp`
+Shellyard speaks SFTP version 3 itself, on the channel that `ssh … -s sftp`
 opens. There is no second process, no second password, and no cryptography
-in Termora.
+in Shellyard.
 
 A folder copy counts the whole tree first, so one progress bar runs from start
 to end. A symbolic link is left out, not followed.
@@ -335,7 +339,7 @@ Nothing is copied while you drag to Finder. Finder receives one file promise
 per row and asks for each item only when you release the pointer. The list
 is an `NSTableView`, not a SwiftUI `Table`, for that one reason: only AppKit
 can give Finder an `NSFilePromiseProvider` for every selected row. See
-`Termora/UI/RemoteFileTable.swift`. The decisions that each promise needs
+`Shellyard/UI/RemoteFileTable.swift`. The decisions that each promise needs
 live in `SFTPPromise`, apart from AppKit, so they can be tested.
 
 ## The Royal TSX import
@@ -346,7 +350,7 @@ the importer keeps that shape, so folder inheritance survives.
 ### Passwords through AppleScript
 
 Royal TSX encrypts `CredentialPassword` and `CredentialPassphrase` with a
-scheme it does not publish. Termora does not guess at it. Royal TSX has an
+scheme it does not publish. Shellyard does not guess at it. Royal TSX has an
 AppleScript command, `get property value`, that returns the decrypted value.
 Against a real document, Royal TSX gave all 12 stored secrets.
 
@@ -371,7 +375,7 @@ A task becomes `NodeSettings.beforeConnect`. It is inheritable, so a task on
 a Royal folder still reaches every connection in that folder. Two rules:
 
 - A task that puts `$PASSWORD$` on its command line is refused.
-- Termora does not call a shell. `LocalCommandRunner.arguments(from:)` splits
+- Shellyard does not call a shell. `LocalCommandRunner.arguments(from:)` splits
   the argument line itself, so a mark such as `;` in a host name stays one
   word.
 
@@ -387,13 +391,35 @@ no value from any document.
 way a shell does. Royal's own `Ping` task names `ping`, which is in `/sbin` on
 a Mac.
 
+## The export and the import
+
+The export writes a JSON file in the public format that
+[CONNECTIONS-FORMAT.md](CONNECTIONS-FORMAT.md) specifies. The import reads the
+same file. The format is not the internal document JSON: that JSON is a flat
+list joined by `parentID`, and it carries fields for old versions.
+
+- `ConnectionsFile` (ShellyardModel) reads and writes the format. A bad item
+  becomes `.invalid` and does not stop the read. A failed `decode` in an
+  unkeyed container does not move to the next element, so `LossyItem`
+  catches the error inside.
+- `ConnectionsFile(exporting:from:includeSecrets:)` makes the file. A branch
+  loses the folders above it, so the top node of the branch gets the values
+  that it inherits (`DocumentIndex.settingsWithInheritedValues`).
+- `ConnectionsImport` is the plan that the import sheet shows as a preview.
+  It gives every node a new identifier. It removes each command before
+  connecting, unless the person keeps them, and always removes a command
+  with a password mark.
+- `ConnectionsFileStorage.write` makes the file with mode 0600, then renames
+  it over the target. `FileManager.replaceItemAt` is not used, because it
+  keeps the permissions of the file that it replaces.
+
 ## The terminal engine
 
 ### The theme
 
 libghostty reads your own `config` file, but it cannot resolve a
 `theme = <name>` line: Ghostty loads theme files from its own application
-bundle, and Termora is a different bundle. `GhosttyConfigFile.themeChoice(in:)`
+bundle, and Shellyard is a different bundle. `GhosttyConfigFile.themeChoice(in:)`
 reads that line, and `GhosttyEnvironment.userTheme()` finds the theme in the
 catalogue that ships with `libghostty-spm`.
 
@@ -402,13 +428,13 @@ over everything, and a pane looks nothing like your Ghostty window.
 
 ### The upstream libghostty-spm
 
-Termora depends on `Lakr233/libghostty-spm`, pinned to an exact version in
-`project.yml`. It is the only remote dependency, and Termora always pins the
-newest upstream release. Termora once carried a vendored copy with three
+Shellyard depends on `Lakr233/libghostty-spm`, pinned to an exact version in
+`project.yml`. It is the only remote dependency, and Shellyard always pins the
+newest upstream release. Shellyard once carried a vendored copy with three
 fixes; all three are upstream since 1.4.5: the wakeup observers,
 `TerminalViewState.isSurfaceVisible`, and programmatic key presses through
 `ghostty_surface_key`. Before you pin a newer version, make sure that the
-three are still there. Each one prevents a bug that Termora hit.
+three are still there. Each one prevents a bug that Shellyard hit.
 
 ## Traps
 
@@ -433,7 +459,7 @@ system draws its field above all other sidebar content, so nothing can sit
 above the filter. `SidebarView` has its own `FilterField`.
 
 **A UI test target must not link a package that the application links.**
-Adding `TermoraSSH` to `TermoraUITests` stopped the application under test
+Adding `ShellyardSSH` to `ShellyardUITests` stopped the application under test
 from opening any window, with no error. The test bundle links only the
 packages it imports itself.
 
@@ -445,7 +471,7 @@ log as one line. Use `split(whereSeparator: \.isNewline)`. See
 **Swift 6.3.3 crashes in code generation** when a method reference goes
 straight to a `Binding` setter, as in `set: change`. Write the closure out:
 `set: { newValue in change(to: newValue) }`. See `AuthenticationEditor` in
-`Termora/UI/InspectorView.swift`.
+`Shellyard/UI/InspectorView.swift`.
 
 **Each pane keeps its one `TerminalView`.** The Ghostty surface, and so the
 process, belongs to the platform view. A split moves a pane to a new place
@@ -467,7 +493,7 @@ Click the tab name by its coordinates:
 
 **XCUITest `typeText` can drop characters that need Shift**, such as `:`,
 with some keyboard layouts. Put such text in the fixture, for example as the
-text after connecting, which Termora pastes.
+text after connecting, which Shellyard pastes.
 
 **In a UI test, an identifier query can count more than one element per
 view.** Compare a count with the count before the action, not with a fixed
@@ -478,7 +504,7 @@ number.
 The icon is the Tabler `terminal` icon on the macOS rounded square.
 `Tools/make-app-icon.swift` draws it with CoreGraphics and writes every size:
 
-    swift Tools/make-app-icon.swift Termora/Resources/Assets.xcassets/AppIcon.appiconset
+    swift Tools/make-app-icon.swift Shellyard/Resources/Assets.xcassets/AppIcon.appiconset
 
 ImageMagick cannot render the source SVG: its built-in renderer drops strokes
 and gradients.

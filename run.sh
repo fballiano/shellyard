@@ -17,7 +17,7 @@ echo "==> Making the Xcode project"
 xcodegen generate >/dev/null
 
 echo "==> Building"
-xcodebuild -project Termora.xcodeproj -scheme Termora \
+xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
            -configuration Debug \
            -destination 'platform=macOS,arch=arm64' \
            -derivedDataPath build build \

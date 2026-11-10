@@ -27,7 +27,7 @@ documentation.
 ## Keep the files together
 
 The four texts say the same thing in four formats. When the command changes,
-change `Tools/termora-cli/main.swift` first, then every file here.
+change `Tools/shellyard-cli/main.swift` first, then every file here.
 
 The Gemini manifest is `gemini-extension.json`, in the root of the
 repository. The Gemini CLI reads the manifest from the root of the folder

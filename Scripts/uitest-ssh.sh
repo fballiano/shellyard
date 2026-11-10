@@ -10,13 +10,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-only=${1:-TermoraUITests/TabSwitchDuringConnectTests}
+only=${1:-ShellyardUITests/TabSwitchDuringConnectTests}
 
 # TMPDIR ends with a slash on macOS. Without the strip, the path holds
-# "//", Termora passes the key path on with one "/", and the pkill in the
+# "//", Shellyard passes the key path on with one "/", and the pkill in the
 # trap below never matches the control masters the application leaves.
 tmp=${TMPDIR:-/tmp}
-dir=$(mktemp -d "${tmp%/}/termora-uitest-sshd.XXXXXX")
+dir=$(mktemp -d "${tmp%/}/shellyard-uitest-sshd.XXXXXX")
 chmod 700 "$dir"
 sshd_pid=""
 # Also end the ssh control masters the application leaves behind: they name
@@ -24,8 +24,8 @@ sshd_pid=""
 # step tolerates failure, or `set -e` stops the trap at the first dead pid.
 trap '{ [ -n "$sshd_pid" ] && kill "$sshd_pid"; pkill -f "$dir"; rm -rf "$dir"; } 2>/dev/null || true' EXIT
 
-ssh-keygen -q -t ed25519 -f "$dir/host_key" -N "" -C termora-uitest
-ssh-keygen -q -t ed25519 -f "$dir/key" -N "" -C termora-uitest
+ssh-keygen -q -t ed25519 -f "$dir/host_key" -N "" -C shellyard-uitest
+ssh-keygen -q -t ed25519 -f "$dir/key" -N "" -C shellyard-uitest
 cp "$dir/key.pub" "$dir/authorized_keys"
 chmod 600 "$dir/authorized_keys"
 
@@ -52,8 +52,8 @@ for _ in $(seq 1 100); do
     sleep 0.05
 done
 
-TEST_RUNNER_TERMORA_TEST_SSH_PORT=$port \
-TEST_RUNNER_TERMORA_TEST_SSH_KEY="$dir/key" \
-xcodebuild -project Termora.xcodeproj -scheme Termora \
+TEST_RUNNER_SHELLYARD_TEST_SSH_PORT=$port \
+TEST_RUNNER_SHELLYARD_TEST_SSH_KEY="$dir/key" \
+xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
     -destination 'platform=macOS,arch=arm64' -derivedDataPath build \
     -only-testing:"$only" test
