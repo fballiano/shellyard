@@ -294,3 +294,48 @@ func importUnderFolder() {
     #expect(plan.connections.first?.parentID == parent)
     #expect(plan.connections.first?.position == 3)
 }
+
+@Test("The settings of the list survive a write and a read")
+func listSettingsRoundTrip() throws {
+    let file = ConnectionsFile(settings: NodeSettings(username: .value("systemio")), items: [])
+    let read = try ConnectionsFile.decode(file.encoded())
+    #expect(read.settings.username == .value("systemio"))
+    #expect(read.settingsProblem == nil)
+    // Without settings, the file has no settings field.
+    let plain = try String(decoding: ConnectionsFile(items: []).encoded(), as: UTF8.self)
+    #expect(!plain.contains("settings"))
+}
+
+@Test("An import writes the settings of the list into the items at the top")
+func importTakesListSettings() throws {
+    let file = try ConnectionsFile.decode(json("""
+    { "format": "shellyard.connections", "version": 1,
+      "settings": { "username": "systemio", "jumpHost": "bastion" },
+      "items": [
+        { "type": "connection", "name": "a", "host": "a", "settings": { "username": "root" } },
+        { "type": "folder", "name": "F", "items": [ { "type": "connection", "name": "b", "host": "b" } ] }
+      ] }
+    """))
+    let result = ConnectionsImport(file: file, under: nil, firstPosition: 0, keepCommands: false)
+    let a = try #require(result.connections.first { $0.name == "a" })
+    #expect(a.settings.username == .value("root"))
+    #expect(a.settings.jumpHost == .value("bastion"))
+    let folder = try #require(result.folders.first)
+    #expect(folder.settings.username == .value("systemio"))
+    // A deeper item inherits from its folder, as before.
+    #expect(result.connections.first { $0.name == "b" }?.settings.username == .inherit)
+}
+
+@Test("Bad settings of the list are reported, and the items still come through")
+func badListSettingsAreReported() throws {
+    let file = try ConnectionsFile.decode(json("""
+    { "format": "shellyard.connections", "version": 1,
+      "settings": { "keepAliveSeconds": -5 },
+      "items": [ { "type": "connection", "name": "a", "host": "a" } ] }
+    """))
+    #expect(file.settingsProblem != nil)
+    #expect(file.settings == .inheritAll)
+    let result = ConnectionsImport(file: file, under: nil, firstPosition: 0, keepCommands: false)
+    #expect(result.problems.count == 1)
+    #expect(result.connections.count == 1)
+}

@@ -36,8 +36,9 @@ struct FolderSyncEditor: View {
 
             if let sync {
                 Text("The address returns a Shellyard connections file. Each sync adds, "
-                     + "changes, and removes the entries it made. Entries that you add "
-                     + "by hand are never touched, and your changes to a synced entry stay. "
+                     + "changes, and removes the entries it made. The list can also set "
+                     + "the settings of this folder. Entries that you add by hand are never "
+                     + "touched, and your changes to a synced entry or to this folder stay. "
                      + "When you turn the sync off, the entries stay as normal entries.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

@@ -438,11 +438,22 @@ and runs the schedule. `Document.applySync` (in ShellyardModel, with
   changed here, so it takes the new value. Any other field keeps the local
   value. The password merges apart from the method, so a password typed
   here survives a file that sends none.
+- **The settings of the list.** The top-level `settings` of the file merge
+  into the synced folder itself, the same way. Their base is
+  `FolderSync.settingsBase`. A setting that the person set before the first
+  sync stays, because the first base is "inherit all".
 - **Deleted stays deleted.** A delete records the `id` in
   `FolderSync.excludedIDs`. A synced node found outside its folder was moved
   out by the person: it loses its link, and its `id` is excluded too. A node
   whose parent no longer exists is not "outside": the sync places it again.
   The children of an excluded folder are still read, and take its place.
+- **Detached nodes.** `releaseDetachedSyncedNodes` runs after each
+  `DocumentStore.update` and when a document opens. It clears the link of a
+  node that is outside its synced folder (and excludes its `id`), and of a
+  node whose synced folder is gone or has its sync off. Without it, a synced
+  folder that the person moved out, and whose synced folder they then
+  deleted, kept a dead link: no sync cleared it, and the inspector hid its
+  Sync section.
 - **A secret stays with its method.** A password typed here never becomes the
   passphrase of a key that the file sends, or the other way round.
 - **Trust.** Unless `trustsServer` is on, the engine removes commands before

@@ -41,6 +41,10 @@ public struct FolderSync: Codable, Hashable, Sendable {
     /// The ids of the entries that the person deleted, or moved out of the
     /// folder. The sync does not add them again.
     public var excludedIDs: [String]
+    /// The top-level settings that the list gave the last time. A setting of
+    /// the folder that still has this value follows the list. A setting that
+    /// the person changed keeps their value.
+    public var settingsBase: NodeSettings
 
     public init(
         url: String = "",
@@ -48,7 +52,8 @@ public struct FolderSync: Codable, Hashable, Sendable {
         password: Secret = .empty,
         interval: Interval = .daily,
         trustsServer: Bool = false,
-        excludedIDs: [String] = []
+        excludedIDs: [String] = [],
+        settingsBase: NodeSettings = .inheritAll
     ) {
         self.url = url
         self.username = username
@@ -56,10 +61,11 @@ public struct FolderSync: Codable, Hashable, Sendable {
         self.interval = interval
         self.trustsServer = trustsServer
         self.excludedIDs = excludedIDs
+        self.settingsBase = settingsBase
     }
 
     private enum CodingKeys: String, CodingKey {
-        case url, username, password, interval, trustsServer, excludedIDs
+        case url, username, password, interval, trustsServer, excludedIDs, settingsBase
     }
 
     /// Every field but the address may be missing, so a later version can
@@ -72,6 +78,7 @@ public struct FolderSync: Codable, Hashable, Sendable {
         interval = (try? container.decodeIfPresent(Interval.self, forKey: .interval)) ?? .daily
         trustsServer = try container.decodeIfPresent(Bool.self, forKey: .trustsServer) ?? false
         excludedIDs = try container.decodeIfPresent([String].self, forKey: .excludedIDs) ?? []
+        settingsBase = try container.decodeIfPresent(NodeSettings.self, forKey: .settingsBase) ?? .inheritAll
     }
 
     /// The address as a URL, or `nil` when it is not one that the sync uses.

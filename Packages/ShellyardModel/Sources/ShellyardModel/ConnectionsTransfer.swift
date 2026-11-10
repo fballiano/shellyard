@@ -102,13 +102,19 @@ extension DocumentIndex {
         of settings: NodeSettings,
         under parentID: UUID?
     ) -> NodeSettings {
-        let chain = ancestors(ofParent: parentID)
-        var result = settings
+        // The nearest folder comes first, and a filled field stays filled.
+        ancestors(ofParent: parentID).reduce(settings) { $0.inheriting(from: $1.settings) }
+    }
+}
+
+extension NodeSettings {
+    /// These settings, with each field that inherits taken from `parent`.
+    public func inheriting(from parent: NodeSettings) -> NodeSettings {
+        var result = self
         func fill<Value>(_ keyPath: WritableKeyPath<NodeSettings, Inherited<Value>>) {
-            guard result[keyPath: keyPath].inheritsFromParent else { return }
-            if let value = chain.lazy.compactMap({ $0.settings[keyPath: keyPath].ownValue }).first {
-                result[keyPath: keyPath] = .value(value)
-            }
+            guard result[keyPath: keyPath].inheritsFromParent,
+                  let value = parent[keyPath: keyPath].ownValue else { return }
+            result[keyPath: keyPath] = .value(value)
         }
         fill(\.username)
         fill(\.authentication)
@@ -166,7 +172,24 @@ public struct ConnectionsImport: Sendable {
         firstPosition: Int,
         keepCommands: Bool
     ) {
-        add(file.items, under: parent, firstPosition: firstPosition,
+        if let reason = file.settingsProblem {
+            problems.append(Note(path: "The settings of the list", text: reason))
+        }
+        // The import adds no folder for the list itself, so the items at the
+        // top take its settings into their own.
+        let items = file.items.map { item -> ConnectionsFile.Item in
+            switch item {
+            case .folder(var folder, let externalID, let children):
+                folder.settings = folder.settings.inheriting(from: file.settings)
+                return .folder(folder, externalID: externalID, items: children)
+            case .connection(var connection, let externalID):
+                connection.settings = connection.settings.inheriting(from: file.settings)
+                return .connection(connection, externalID: externalID)
+            case .invalid:
+                return item
+            }
+        }
+        add(items, under: parent, firstPosition: firstPosition,
             path: [], keepCommands: keepCommands, depth: 0)
     }
 

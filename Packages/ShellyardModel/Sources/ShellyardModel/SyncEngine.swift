@@ -68,6 +68,54 @@ extension Document {
     }
 }
 
+extension Document {
+    /// Makes each synced node that left its synced folder a normal node.
+    ///
+    /// A node leaves when the person moves it out, when the synced folder is
+    /// deleted, or when its sync is off. Without this, the node keeps a link
+    /// that no sync clears, and it cannot become a synced folder itself. A
+    /// node that the person moved out is excluded, so the sync does not add
+    /// it again. The sync does the same at its next run; this does it at once.
+    public mutating func releaseDetachedSyncedNodes() {
+        guard folders.contains(where: { $0.syncLink != nil })
+            || connections.contains(where: { $0.syncLink != nil }) else { return }
+        let index = DocumentIndex(self)
+        var exclusions: [UUID: [String]] = [:]
+
+        /// False when the node must lose its link.
+        func staysLinked(_ link: SyncLink, id: UUID, parentID: UUID?) -> Bool {
+            guard id != link.sourceID, index.folder(link.sourceID)?.sync != nil else { return false }
+            // A parent that no longer exists is not a move by the person:
+            // the next sync places the node again.
+            if let parentID, index.folder(parentID) == nil
+                || index.isDescendant(parentID, ofOrEqualTo: link.sourceID) {
+                return true
+            }
+            exclusions[link.sourceID, default: []].append(link.externalID)
+            return false
+        }
+
+        for at in folders.indices {
+            guard let link = folders[at].syncLink,
+                  !staysLinked(link, id: folders[at].id, parentID: folders[at].parentID) else { continue }
+            folders[at].syncLink = nil
+        }
+        for at in connections.indices {
+            guard let link = connections[at].syncLink,
+                  !staysLinked(link, id: connections[at].id, parentID: connections[at].parentID) else { continue }
+            connections[at].syncLink = nil
+        }
+        for (sourceID, externalIDs) in exclusions {
+            guard let at = folders.firstIndex(where: { $0.id == sourceID }),
+                  var sync = folders[at].sync else { continue }
+            for externalID in externalIDs where !sync.excludedIDs.contains(externalID) {
+                sync.excludedIDs.append(externalID)
+            }
+            folders[at].sync = sync
+        }
+    }
+}
+
 /// The work of one sync, on a copy of the document.
 struct SyncEngine {
     private(set) var document: Document
@@ -102,6 +150,9 @@ struct SyncEngine {
         collectExistingNodes()
         let existingCount = existingFolders.count + existingConnections.count
 
+        if let reason = file.settingsProblem {
+            problem([root.name], "the settings of the list: \(reason)")
+        }
         walk(file.items, parent: rootID, path: [], depth: 0)
 
         if !listedAnything, existingCount > 0, !hadProblems {
@@ -109,6 +160,9 @@ struct SyncEngine {
         }
         removeNodesNoLongerListed()
         renumber()
+        if file.settingsProblem == nil {
+            applyRootSettings(file.settings)
+        }
 
         if let at = document.folders.firstIndex(where: { $0.id == rootID }) {
             document.folders[at].sync = config
@@ -289,6 +343,21 @@ struct SyncEngine {
         report.added += 1
         keptNodes.insert(connection.id)
         syncedOrder[parent, default: []].append(connection.id)
+    }
+
+    /// Gives the synced folder the top-level settings of the list. A
+    /// setting that the person changed keeps their value. A setting that the
+    /// list never sent, such as the authentication, stays as the person set it.
+    private mutating func applyRootSettings(_ settings: NodeSettings) {
+        guard let at = document.folders.firstIndex(where: { $0.id == rootID }) else { return }
+        let remote = filterUntrusted(settings, at: [document.folders[at].name])
+        let local = document.folders[at].settings
+        let merged = mergeSettings(local: local, base: config.settingsBase, remote: remote)
+        if merged != local {
+            document.folders[at].settings = merged
+            report.updated += 1
+        }
+        config.settingsBase = remote
     }
 
     private mutating func count(before: SyncedFields, after: SyncedFields, moved: Bool) {

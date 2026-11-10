@@ -329,6 +329,12 @@ How a sync works:
   the entries in it that the list still has move to the top of the synced
   folder. In the folder editor, **Bring Them Back** cancels this.
 - **The place and the order** of synced entries follow the list.
+- **The list can set the settings of the synced folder,** for example one
+  user name for all its servers. If you change one of these settings on the
+  folder, your value stays. Settings that the list does not send, such as
+  the authentication, stay as you set them.
+- **An entry that you move out of the synced folder** becomes a normal entry
+  at once. You can then turn on a sync for it.
 - **Trust.** A command before connecting runs a program on your Mac. Agent
   forwarding and X11 forwarding give the far host a way back to your Mac.
   The sync removes these settings, unless you turn on **Trust this server**.

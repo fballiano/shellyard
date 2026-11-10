@@ -24,9 +24,18 @@ public struct ConnectionsFile: Hashable, Sendable {
     /// Raise this number only when an older reader could misread a new file.
     public static let currentVersion = 1
 
+    /// The settings of the folder that holds the list. A synced folder
+    /// takes them as its own settings, and the items inherit them from it.
+    /// An import writes them into each top-level item. The export leaves
+    /// them empty.
+    public var settings: NodeSettings
+    /// Why the top-level settings could not be read, or `nil`. The settings
+    /// are then empty.
+    public var settingsProblem: String?
     public var items: [Item]
 
-    public init(items: [Item] = []) {
+    public init(settings: NodeSettings = .inheritAll, items: [Item] = []) {
+        self.settings = settings
         self.items = items
     }
 
@@ -76,7 +85,10 @@ extension ConnectionsFile {
         guard head.version <= currentVersion else {
             throw ConnectionsFileError.newerVersion(head.version)
         }
-        return ConnectionsFile(items: head.items?.map(\.item) ?? [])
+        var file = ConnectionsFile(settings: head.settings?.settings ?? .inheritAll,
+                                   items: head.items?.map(\.item) ?? [])
+        file.settingsProblem = head.settings?.problem
+        return file
     }
 
     /// Writes the file as indented JSON. Invalid items are left out.
@@ -86,6 +98,7 @@ extension ConnectionsFile {
         return try encoder.encode(Head(
             format: Self.formatName,
             version: Self.currentVersion,
+            settings: settings == .inheritAll ? nil : LossySettings(settings),
             items: items.map(LossyItem.init)
         ))
     }
@@ -94,7 +107,32 @@ extension ConnectionsFile {
     private struct Head: Codable {
         var format: String
         var version: Int
+        var settings: LossySettings?
         var items: [LossyItem]?
+    }
+}
+
+/// Reads the top-level settings and never throws. A bad value there must
+/// not stop the list: the sync reports it, and changes no settings.
+private struct LossySettings: Codable {
+    var settings: NodeSettings
+    var problem: String?
+
+    init(_ settings: NodeSettings) {
+        self.settings = settings
+    }
+
+    init(from decoder: any Decoder) throws {
+        do {
+            settings = try SettingsBox(from: decoder).settings
+        } catch {
+            settings = .inheritAll
+            problem = describe(error)
+        }
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        try SettingsBox(settings: settings).encode(to: encoder)
     }
 }
 

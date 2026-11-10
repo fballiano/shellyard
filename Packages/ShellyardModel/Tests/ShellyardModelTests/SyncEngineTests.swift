@@ -489,3 +489,137 @@ func editorWritesOnlyItsEdits() {
     #expect(result.settings.jumpHost == .value("bastion"))
     #expect(result.parentID == stored.parentID)
 }
+
+// MARK: - The settings of the list
+
+private func file(settings: String, items json: String = firstList) throws -> ConnectionsFile {
+    try ConnectionsFile.decode(Data("""
+    { "format": "shellyard.connections", "version": 1, "settings": \(settings), "items": \(json) }
+    """.utf8))
+}
+
+@Test("The settings of the list become the settings of the synced folder")
+func listSettingsGoToTheFolder() throws {
+    var fixture = Fixture()
+    let report = try fixture.document.applySync(
+        file(settings: #"{ "username": "systemio", "keepAliveSeconds": 30 }"#), toFolder: fixture.fleetID
+    )
+    #expect(fixture.fleet.settings.username == .value("systemio"))
+    #expect(fixture.fleet.settings.keepAliveSeconds == .value(30))
+    #expect(fixture.fleet.sync?.settingsBase.username == .value("systemio"))
+    #expect(report.updated == 1)
+
+    // The connections inherit the user from the synced folder.
+    let index = DocumentIndex(fixture.document)
+    let db = try #require(fixture.connection("db-1"))
+    #expect(index.effectiveSettings(for: db).username == "systemio")
+
+    let again = try fixture.document.applySync(
+        file(settings: #"{ "username": "systemio", "keepAliveSeconds": 30 }"#), toFolder: fixture.fleetID
+    )
+    #expect(!again.changedSomething)
+}
+
+@Test("A folder setting changed here stays; the other settings follow the list")
+func folderSettingChangedHereStays() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(settings: #"{ "username": "systemio", "jumpHost": "bastion" }"#),
+                                   toFolder: fixture.fleetID)
+    let at = try #require(fixture.document.folders.firstIndex { $0.id == fixture.fleetID })
+    fixture.document.folders[at].settings.username = .value("me")
+    fixture.document.folders[at].settings.authentication = .value(.agent)
+
+    try fixture.document.applySync(file(settings: #"{ "username": "ops", "jumpHost": "gate" }"#),
+                                   toFolder: fixture.fleetID)
+    #expect(fixture.fleet.settings.username == .value("me"))
+    #expect(fixture.fleet.settings.jumpHost == .value("gate"))
+    // The list never sent a method, so the method of the person stays.
+    #expect(fixture.fleet.settings.authentication == .value(.agent))
+}
+
+@Test("A folder setting set by hand before the first sync stays")
+func handSetFolderSettingStays() throws {
+    var fixture = Fixture()
+    let at = try #require(fixture.document.folders.firstIndex { $0.id == fixture.fleetID })
+    fixture.document.folders[at].settings.username = .value("me")
+
+    try fixture.document.applySync(file(settings: #"{ "username": "systemio" }"#), toFolder: fixture.fleetID)
+    #expect(fixture.fleet.settings.username == .value("me"))
+}
+
+@Test("A setting that the list stops sending inherits again")
+func droppedListSettingInherits() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(settings: #"{ "username": "systemio" }"#), toFolder: fixture.fleetID)
+    try fixture.document.applySync(file(firstList), toFolder: fixture.fleetID)
+    #expect(fixture.fleet.settings.username == .inherit)
+    #expect(fixture.fleet.sync?.settingsBase == .inheritAll)
+}
+
+@Test("The settings of an untrusted list lose commands and forwarding")
+func listSettingsNeedTrust() throws {
+    var fixture = Fixture()
+    let report = try fixture.document.applySync(file(settings: """
+    { "agentForwarding": true, "beforeConnect": { "program": "/usr/bin/true" } }
+    """), toFolder: fixture.fleetID)
+    #expect(fixture.fleet.settings.agentForwarding == .inherit)
+    #expect(fixture.fleet.settings.beforeConnect == .inherit)
+    #expect(report.removedCommands.count == 2)
+}
+
+@Test("Bad settings in the list change no setting and remove nothing")
+func badListSettings() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(settings: #"{ "username": "systemio" }"#), toFolder: fixture.fleetID)
+    let report = try fixture.document.applySync(
+        file(settings: #"{ "username": "ops", "keepAliveSeconds": -1 }"#, items: "[]"),
+        toFolder: fixture.fleetID
+    )
+    #expect(fixture.fleet.settings.username == .value("systemio"))
+    #expect(report.problems.count == 1)
+    #expect(report.removed == 0)
+    #expect(fixture.connection("web-1") != nil)
+}
+
+// MARK: - Synced entries that leave their synced folder
+
+@Test("A synced folder moved out, then its synced folder deleted, becomes a normal folder")
+func detachedFolderBecomesNormal() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(firstList), toFolder: fixture.fleetID)
+    let databases = try #require(fixture.folder("db"))
+    fixture.document.move(id: databases.id, toParent: nil, position: 9)
+    fixture.document.remove(id: fixture.fleetID)
+
+    fixture.document.releaseDetachedSyncedNodes()
+    let freed = try #require(fixture.document.folders.first { $0.id == databases.id })
+    #expect(freed.syncLink == nil)
+    #expect(fixture.document.connections.allSatisfy { $0.syncLink == nil })
+}
+
+@Test("An entry moved out is released and excluded at once, before the next sync")
+func movedOutIsReleasedAtOnce() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(firstList), toFolder: fixture.fleetID)
+    let web = try #require(fixture.connection("web-1"))
+    fixture.document.move(id: web.id, toParent: fixture.otherID, position: 0)
+
+    fixture.document.releaseDetachedSyncedNodes()
+    #expect(fixture.document.connections.first { $0.id == web.id }?.syncLink == nil)
+    #expect(fixture.fleet.sync?.excludedIDs == ["web-1"])
+    // The entries still inside keep their link.
+    #expect(fixture.connection("db-1") != nil)
+    #expect(fixture.folder("db") != nil)
+}
+
+@Test("The entries of a folder whose sync is off become normal")
+func syncOffReleases() throws {
+    var fixture = Fixture()
+    try fixture.document.applySync(file(firstList), toFolder: fixture.fleetID)
+    let at = try #require(fixture.document.folders.firstIndex { $0.id == fixture.fleetID })
+    fixture.document.folders[at].sync = nil
+
+    fixture.document.releaseDetachedSyncedNodes()
+    #expect(fixture.document.connections.allSatisfy { $0.syncLink == nil })
+    #expect(fixture.document.folders.allSatisfy { $0.syncLink == nil })
+}

@@ -61,12 +61,27 @@ the format, change this document and the code together.
 |-----------|--------|----------|-------------------------------------------------|
 | `format`  | string | yes      | Always `"shellyard.connections"`.               |
 | `version` | number | yes      | The version of the format. Now `1`.             |
+| `settings`| object | no       | The settings of the list. See below.            |
 | `items`   | array  | no       | The folders and connections at the top level.   |
 
 The reader refuses the file when `format` is wrong. It also refuses a file
 with a `version` higher than the version that it knows. Raise the version
 only when an older reader could misread a new file. A new optional field
 does not need a new version.
+
+The top-level `settings` use the same fields as the settings of an item (see
+"Settings"). The items at the top level inherit them:
+
+- A synced folder takes them as its own settings. For example, a list can
+  set one user name for all its servers, and the servers send none. A
+  setting that the person changes on the synced folder keeps their value.
+- The import adds no folder for the list, so it writes the settings into
+  each item at the top level. A field that the item sets itself wins.
+- The export does not write them.
+
+When the top-level `settings` cannot be read, the import reports it and
+continues. The sync reports it, changes no setting, and removes nothing.
+Shellyard 2.0 does not read the top-level `settings`.
 
 ## An item
 

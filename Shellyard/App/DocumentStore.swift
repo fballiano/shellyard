@@ -201,6 +201,14 @@ final class DocumentStore: ObservableObject {
     private func adopt(_ vault: Vault) {
         self.vault = vault
         documentURL = vault.url
+        // A document from 2.0 can hold a synced node whose synced folder is
+        // gone. It becomes a normal node now.
+        var repaired = vault.document
+        repaired.releaseDetachedSyncedNodes()
+        if repaired != vault.document {
+            vault.update { $0 = repaired }
+            save()
+        }
         index = DocumentIndex(vault.document)
         unlockErrorMessage = nil
         phase = .unlocked
@@ -269,9 +277,15 @@ final class DocumentStore: ObservableObject {
     // MARK: - Changes
 
     /// Changes the document, rebuilds the index, and saves.
+    ///
+    /// A synced node that the change moved out of its synced folder, or
+    /// whose synced folder the change deleted, becomes a normal node.
     func update(_ change: (inout ShellyardModel.Document) -> Void) {
         guard let vault else { return }
-        vault.update(change)
+        vault.update { document in
+            change(&document)
+            document.releaseDetachedSyncedNodes()
+        }
         index = DocumentIndex(vault.document)
         save()
     }
