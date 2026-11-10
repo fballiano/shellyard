@@ -103,6 +103,16 @@ key to the tests. Without the script, those tests are skipped.
 ./Scripts/uitest-ssh.sh ShellyardUITests/TabShortcutsTests   # one class
 ```
 
+The test of the folder sync needs an HTTP server, and the UI test runner may
+not open a listening socket. `Scripts/uitest-sync.sh` builds
+`Scripts/sync-test-server.swift`, starts it on a high port of `127.0.0.1`,
+and runs `FolderSyncTests`. The server answers 401 without the right HTTP
+Basic credentials. Without the script, the test is skipped.
+
+```sh
+./Scripts/uitest-sync.sh
+```
+
 The SSH package tests start their own OpenSSH server on a high port, in its
 own folder, and build `shellyard-askpass` from source. They read and write
 nothing in your `~/.ssh`. They are skipped when `/usr/sbin/sshd` is missing.
@@ -412,6 +422,49 @@ list joined by `parentID`, and it carries fields for old versions.
 - `ConnectionsFileStorage.write` makes the file with mode 0600, then renames
   it over the target. `FileManager.replaceItemAt` is not used, because it
   keeps the permissions of the file that it replaces.
+
+## Synced folders
+
+A folder with a `FolderSync` gets its contents from a web address that
+returns a connections file. `SyncController` (in the app) fetches the file
+and runs the schedule. `Document.applySync` (in ShellyardModel, with
+`SyncEngineTests`) changes the document.
+
+- **Identity.** Each node that a sync makes has a `SyncLink`: the synced
+  folder and the `id` of the item. A node without a link belongs to the
+  person, and the sync never touches it.
+- **Local changes stay.** The link also holds `base`, the values that the
+  file gave the last time. A field whose value is still `base` was not
+  changed here, so it takes the new value. Any other field keeps the local
+  value. The password merges apart from the method, so a password typed
+  here survives a file that sends none.
+- **Deleted stays deleted.** A delete records the `id` in
+  `FolderSync.excludedIDs`. A synced node found outside its folder was moved
+  out by the person: it loses its link, and its `id` is excluded too. A node
+  whose parent no longer exists is not "outside": the sync places it again.
+  The children of an excluded folder are still read, and take its place.
+- **A secret stays with its method.** A password typed here never becomes the
+  passphrase of a key that the file sends, or the other way round.
+- **Trust.** Unless `trustsServer` is on, the engine removes commands before
+  connecting, agent forwarding, and X11 forwarding from the file.
+- **Sync off.** When the person turns the sync off, `releaseSyncedNodes`
+  clears the links, so a later sync from another address removes nothing.
+- **The editor.** The editor sheet keeps a draft and the stored value it
+  started from (`base`). A save writes only the fields that the draft
+  changed (`applyingEdits(of:since:)`), never the place or the link. A sync
+  that runs while the editor is open is therefore not undone.
+- **Safety.** The engine works on a copy and throws without a change when
+  the file has no usable item and the folder has synced nodes. While the
+  file has a bad item, nothing is removed.
+- **The request.** HTTPS only, or HTTP to `localhost` (`NSAllowsLocalNetworking`
+  in Info.plist). An ephemeral session, HTTP Basic, a 20 MB limit checked
+  during the download, and redirects to the same origin only.
+- **The schedule.** The controller checks every 15 minutes and when the
+  document opens. It skips while an editor is open, because the draft of the
+  editor would write old values over the result. The status of the last
+  sync stays in `UserDefaults` (`ShellyardSyncStatus`), not in the document.
+- **Compatibility.** A version older than 2.0.0 drops `sync` and `syncLink`
+  when it saves the document.
 
 ## The terminal engine
 

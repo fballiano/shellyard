@@ -16,6 +16,10 @@ public struct Folder: Identifiable, Codable, Hashable, Sendable {
     public var isExpanded: Bool
     public var settings: NodeSettings
     public var notes: String
+    /// The web address that fills this folder, or `nil` for a normal folder.
+    public var sync: FolderSync?
+    /// Set when a sync made this folder.
+    public var syncLink: SyncLink?
 
     public init(
         id: UUID = UUID(),
@@ -24,7 +28,9 @@ public struct Folder: Identifiable, Codable, Hashable, Sendable {
         position: Int = 0,
         isExpanded: Bool = true,
         settings: NodeSettings = .inheritAll,
-        notes: String = ""
+        notes: String = "",
+        sync: FolderSync? = nil,
+        syncLink: SyncLink? = nil
     ) {
         self.id = id
         self.parentID = parentID
@@ -33,6 +39,8 @@ public struct Folder: Identifiable, Codable, Hashable, Sendable {
         self.isExpanded = isExpanded
         self.settings = settings
         self.notes = notes
+        self.sync = sync
+        self.syncLink = syncLink
     }
 }
 
@@ -51,6 +59,8 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
     public var settings: NodeSettings
     public var forwards: [PortForward]
     public var notes: String
+    /// Set when a sync made this connection.
+    public var syncLink: SyncLink?
 
     public init(
         id: UUID = UUID(),
@@ -62,7 +72,8 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
         isFavorite: Bool = false,
         settings: NodeSettings = .inheritAll,
         forwards: [PortForward] = [],
-        notes: String = ""
+        notes: String = "",
+        syncLink: SyncLink? = nil
     ) {
         self.id = id
         self.parentID = parentID
@@ -74,13 +85,14 @@ public struct Connection: Identifiable, Codable, Hashable, Sendable {
         self.settings = settings
         self.forwards = forwards
         self.notes = notes
+        self.syncLink = syncLink
     }
 }
 
 extension Connection {
     private enum CodingKeys: String, CodingKey {
         case id, parentID, name, position, host, port, portFromSSHConfig
-        case isFavorite, settings, forwards, notes
+        case isFavorite, settings, forwards, notes, syncLink
     }
 
     /// The file always holds a number in `port`, because Shellyard 1.0 cannot
@@ -101,6 +113,7 @@ extension Connection {
         settings = try container.decode(NodeSettings.self, forKey: .settings)
         forwards = try container.decode([PortForward].self, forKey: .forwards)
         notes = try container.decode(String.self, forKey: .notes)
+        syncLink = try container.decodeIfPresent(SyncLink.self, forKey: .syncLink)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -116,6 +129,7 @@ extension Connection {
         try container.encode(settings, forKey: .settings)
         try container.encode(forwards, forKey: .forwards)
         try container.encode(notes, forKey: .notes)
+        try container.encodeIfPresent(syncLink, forKey: .syncLink)
     }
 }
 

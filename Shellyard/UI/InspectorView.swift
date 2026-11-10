@@ -40,12 +40,17 @@ private struct ConnectionInspector: View {
     /// writes the file when the typing pauses: the whole document is
     /// encrypted on every save, so a save per keystroke is real work.
     @State private var draft: Connection
+    /// The stored node that the draft started from. A save writes only the
+    /// fields where the draft differs from it, so a sync that changed the
+    /// node meanwhile is not undone.
+    @State private var base: Connection
     @State private var portText: String
     @State private var pendingCommit: Task<Void, Never>?
 
     init(connection: Connection) {
         self.connection = connection
         _draft = State(initialValue: connection)
+        _base = State(initialValue: connection)
         _portText = State(initialValue: connection.port.map(String.init) ?? "")
     }
 
@@ -60,6 +65,9 @@ private struct ConnectionInspector: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let link = draft.syncLink {
+                    SyncedEntryNote(link: link)
+                }
                 InspectorSection("Connection") {
                     LabeledRow("Name") { TextField("", text: $draft.name) }
                     LabeledRow("Host") {
@@ -130,16 +138,26 @@ private struct ConnectionInspector: View {
             pendingCommit?.cancel()
             commit(draft)
         }
+        // A sync changed the node. Without edits waiting, the draft follows.
+        .onChange(of: store.index.connection(connection.id)) { _, stored in
+            guard let stored, draft == base, stored != base else { return }
+            draft = stored
+            base = stored
+            portText = stored.port.map(String.init) ?? ""
+        }
     }
 
     private func commit(_ new: Connection) {
+        guard let current = store.index.connection(new.id) else { return }
+        let merged = current.applyingEdits(of: new, since: base)
+        base = new
         // Nothing changed, nothing saved. The disappearing sheet commits
         // once more, and that call must not write the file again.
-        guard store.index.connection(new.id) != new else { return }
+        guard merged != current else { return }
         store.update { document in
             guard let at = document.connections.firstIndex(where: { $0.id == new.id })
             else { return }
-            document.connections[at] = new
+            document.connections[at] = merged
         }
     }
 }
@@ -150,16 +168,22 @@ private struct FolderInspector: View {
     @EnvironmentObject private var store: DocumentStore
     let folder: Folder
     @State private var draft: Folder
+    /// The stored folder that the draft started from. See ConnectionInspector.
+    @State private var base: Folder
     @State private var pendingCommit: Task<Void, Never>?
 
     init(folder: Folder) {
         self.folder = folder
         _draft = State(initialValue: folder)
+        _base = State(initialValue: folder)
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let link = draft.syncLink {
+                    SyncedEntryNote(link: link)
+                }
                 InspectorSection("Folder") {
                     LabeledRow("Name") { TextField("", text: $draft.name) }
                 }
@@ -171,6 +195,16 @@ private struct FolderInspector: View {
 
                 Divider()
                 SettingsEditor(settings: $draft.settings, parentID: draft.parentID)
+
+                // A folder that a sync made cannot be a sync source itself:
+                // two sources would fight over the same entries.
+                if draft.syncLink == nil {
+                    Divider()
+                    FolderSyncEditor(sync: $draft.sync, folderID: draft.id) {
+                        pendingCommit?.cancel()
+                        commit(draft)
+                    }
+                }
 
                 Divider()
                 InspectorSection("Notes") {
@@ -194,14 +228,29 @@ private struct FolderInspector: View {
             pendingCommit?.cancel()
             commit(draft)
         }
+        // A sync started here can change the folder while the editor is
+        // open. Without edits waiting, the draft follows.
+        .onChange(of: store.index.folder(folder.id)) { _, stored in
+            guard let stored, draft == base, stored != base else { return }
+            draft = stored
+            base = stored
+        }
     }
 
     private func commit(_ new: Folder) {
-        guard store.index.folder(new.id) != new else { return }
+        guard let current = store.index.folder(new.id) else { return }
+        let merged = current.applyingEdits(of: new, since: base)
+        base = new
+        guard merged != current else { return }
         store.update { document in
             guard let at = document.folders.firstIndex(where: { $0.id == new.id })
             else { return }
-            document.folders[at] = new
+            document.folders[at] = merged
+            // The sync is off: its entries become normal entries, so a later
+            // sync from any address never removes them.
+            if current.sync != nil, merged.sync == nil {
+                document.releaseSyncedNodes(of: new.id)
+            }
         }
     }
 }
@@ -472,7 +521,7 @@ private struct AuthenticationEditor: View {
 
 // MARK: - Small helpers
 
-private struct LabeledRow<Content: View>: View {
+struct LabeledRow<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
@@ -493,7 +542,7 @@ private struct LabeledRow<Content: View>: View {
 }
 
 /// A titled block in the inspector.
-private struct InspectorSection<Content: View>: View {
+struct InspectorSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 

@@ -1,9 +1,8 @@
 # The Shellyard connections format
 
 This document specifies the JSON file that Shellyard writes when you export
-connections, and reads when you import them. A future sync from a web
-address will use the same format. A person or a script can write the file by
-hand.
+connections, and reads when you import them. A synced folder reads the same
+file from a web address. A person or a script can write the file by hand.
 
 The code is `ConnectionsFile` in `Packages/ShellyardModel`. When you change
 the format, change this document and the code together.
@@ -104,10 +103,29 @@ The export writes the internal identifier of each node, a UUID. A script can
 write any string, for example the name of a server in an inventory. The
 string must be unique in the file.
 
-The import of version 1 does not use the `id`. It gives each node a new
-identifier, so you can import the same file two times. A future sync will use
-the `id` to find a connection that it made before. It can then change that
-connection, and not add a second copy.
+The import does not use the `id`. It gives each node a new identifier, so you
+can import the same file two times.
+
+A synced folder needs the `id`. The sync uses it to find the entry that it
+made before, so it can change that entry and not add a second copy. For a
+sync, every item must have an `id`, and each `id` must be unique in the
+whole file. An item without an `id` is left out. Keep the `id` of an entry
+the same between two answers. If the `id` changes, the sync removes the old
+entry and adds a new one, and the changes that the person made to it are
+lost.
+
+## Serving the file for a synced folder
+
+A synced folder sends an HTTP `GET` request to its address:
+
+- The request has the header `Accept: application/json`.
+- When the folder has a user name or a password, the request has an HTTP
+  Basic `Authorization` header.
+- The server must answer with status 200 and the file as the body. Any other
+  status is an error, and the sync changes nothing.
+- The answer must be smaller than 20 MB, and must arrive in 60 seconds.
+- Shellyard follows a redirect only to the same scheme, host, and port. It
+  does not send the password to another server.
 
 ## Settings
 

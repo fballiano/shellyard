@@ -194,6 +194,7 @@ struct ShellyardApp: App {
     @StateObject private var sessions: SessionsController
     @StateObject private var importer: ImportController
     @StateObject private var transfer = TransferController()
+    @StateObject private var syncer: SyncController
     @StateObject private var autoLock: AutoLockController
     @StateObject private var agentGateway: AgentGateway
 
@@ -216,6 +217,9 @@ struct ShellyardApp: App {
         _importer = StateObject(wrappedValue: MainActor.assumeIsolated {
             ImportController(store: store)
         })
+        _syncer = StateObject(wrappedValue: MainActor.assumeIsolated {
+            SyncController(store: store)
+        })
         _autoLock = StateObject(wrappedValue: MainActor.assumeIsolated {
             AutoLockController(store: store, sessions: sessions)
         })
@@ -231,6 +235,7 @@ struct ShellyardApp: App {
                 .environmentObject(sessions)
                 .environmentObject(importer)
                 .environmentObject(transfer)
+                .environmentObject(syncer)
                 .environmentObject(sessions.remoteEdits)
                 .onAppear { appDelegate.sessions = sessions }
         }

@@ -297,6 +297,59 @@ To import, select **File → Import Connections…** and choose the file:
 [Docs/CONNECTIONS-FORMAT.md](Docs/CONNECTIONS-FORMAT.md) describes the
 format, if you want to make the file with a script.
 
+### Synced folders
+
+A folder can get its connections from a web address, for example from your
+server inventory. The address must return a file in the
+[Shellyard connections format](Docs/CONNECTIONS-FORMAT.md).
+
+To set up a synced folder:
+
+1. Right-click the folder, then select **Edit…**.
+2. In **Sync**, turn on **Fill this folder from a web address**.
+3. Type the address. It must start with `https://`. Plain `http://` works
+   only for `localhost`.
+4. If the server asks for HTTP Basic authentication, type the user name and
+   the password.
+5. Select when to sync: **Only when I ask**, **Every hour**, or **Every day**.
+6. Click **Sync Now**.
+
+How a sync works:
+
+- **Each entry needs an `id`.** The sync uses it to find the entry again. A
+  new `id` adds an entry, a known `id` changes it, and an `id` that the list
+  no longer has removes it.
+- **Your changes stay.** If you change a field of a synced entry, for example
+  its name or its password, the sync keeps your value. The other fields
+  follow the list.
+- **Your own entries stay.** The sync never changes or removes an entry that
+  you added by hand.
+- **Deleted stays deleted.** If you delete a synced entry, or move it out of
+  the folder, the sync does not add it again. If you delete a synced folder,
+  the entries in it that the list still has move to the top of the synced
+  folder. In the folder editor, **Bring Them Back** cancels this.
+- **The place and the order** of synced entries follow the list.
+- **Trust.** A command before connecting runs a program on your Mac. Agent
+  forwarding and X11 forwarding give the far host a way back to your Mac.
+  The sync removes these settings, unless you turn on **Trust this server**.
+  The sync always removes a command that contains `$PASSWORD$`.
+- **Turning the sync off** keeps the entries. They become normal entries,
+  and no later sync removes them.
+- **Errors change nothing.** If the server does not answer, or sends an
+  error, nothing changes. If the list has a bad entry, the sync adds and
+  changes entries, but removes nothing. If the list is empty, the sync
+  changes nothing, because an empty list is usually a fault of the server.
+- **Automatic syncs run only while the document is open,** because the
+  address and its password are in the document. A sync that came due while
+  the document was closed runs when you open it.
+
+The sidebar shows a sync mark on the folder, and a warning mark after a sync
+that failed. Hold the pointer on the mark to read the result.
+
+A Mac with a version of Shellyard older than 2.0.0 does not know synced
+folders. If it saves a shared document, the sync settings are lost. Update
+Shellyard on each Mac that shares the document.
+
 ### Importing from Royal TSX
 
 **File → Import from Royal TSX…** adds the folders and connections of an

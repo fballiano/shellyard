@@ -215,6 +215,7 @@ private struct SidebarRow: View {
     @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var sessions: SessionsController
     @EnvironmentObject private var transfer: TransferController
+    @EnvironmentObject private var syncer: SyncController
     let row: DocumentStore.Row
     @Binding var mark: SidebarDropMark?
     @State private var isHovering = false
@@ -307,12 +308,15 @@ private struct SidebarRow: View {
             }
             .buttonStyle(.plain)
 
-            rowLabel(
-                folder.name,
-                icon: "folder",
-                tint: tint(of: folder.settings.colorTag.ownValue),
-                isFavorite: false
-            )
+            HStack(spacing: 4) {
+                rowLabel(
+                    folder.name,
+                    icon: "folder",
+                    tint: tint(of: folder.settings.colorTag.ownValue),
+                    isFavorite: false
+                )
+                if folder.sync != nil { syncMark(folder) }
+            }
             .contentShape(Rectangle())
             .simultaneousGesture(TapGesture(count: 1).onEnded {
                 store.selection = folder.id
@@ -347,6 +351,25 @@ private struct SidebarRow: View {
                 sessions.open(connection: connection)
             })
             .contextMenu { connectionMenu(connection) }
+        }
+    }
+
+    /// The state of a synced folder: running, failed, or quiet.
+    @ViewBuilder
+    private func syncMark(_ folder: Folder) -> some View {
+        if syncer.isRunning(folder.id) {
+            ProgressView().controlSize(.mini)
+                .help("Syncing")
+        } else if let status = syncer.status(of: folder.id), status.failed {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(.orange)
+                .help("The last sync failed: \(status.message)")
+        } else {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .help(syncer.status(of: folder.id)?.message ?? "Synced from a web address")
         }
     }
 
@@ -421,6 +444,10 @@ private struct SidebarRow: View {
             store.update { $0.add(child) }
             store.selection = child.id
             store.editingID = child.id
+        }
+        if folder.sync != nil {
+            Button("Sync Now") { Task { await syncer.syncNow(folder.id) } }
+                .disabled(syncer.isRunning(folder.id) || folder.sync?.validURL == nil)
         }
         Divider()
         Button("Export…") { transfer.export(folder.id) }

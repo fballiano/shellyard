@@ -7,8 +7,8 @@ import Foundation
 
 /// The public JSON form of a list of connections.
 ///
-/// The export writes it, and the import reads it. A future sync from a web
-/// address will read the same form. `Docs/CONNECTIONS-FORMAT.md` is the
+/// The export writes it, and the import reads it. A synced folder reads the
+/// same form from a web address. `Docs/CONNECTIONS-FORMAT.md` is the
 /// specification; change the two together.
 ///
 /// The form is a tree, so a person or a script can write it by hand. The

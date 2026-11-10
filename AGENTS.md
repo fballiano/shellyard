@@ -51,6 +51,8 @@ Notes on tests:
 - The UI tests write a vault document, then launch the app with
   `-ShellyardLastDocumentPath <path>` (`UserDefaults` reads `-key value` from
   the command line). The app has no test-only code.
+- The folder sync UI test needs `./Scripts/uitest-sync.sh`, which starts a
+  local HTTP server outside the runner. The runner may not bind a port.
 - Opt-in suites: `SHELLYARD_ROYAL_DOCUMENT=<path>` enables the real-document
   import tests; `SHELLYARD_TEST_ROYAL_BRIDGE=1 swift test --filter
   RoyalBridgeLiveTests` (in Packages/ShellyardImport) starts the real Royal TSX

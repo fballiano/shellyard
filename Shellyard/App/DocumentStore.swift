@@ -360,7 +360,12 @@ final class DocumentStore: ObservableObject {
     func confirmDeletion() {
         guard let id = deletingID else { return }
         deletingID = nil
-        update { $0.remove(id: id) }
+        update { document in
+            // A synced entry that the person deletes must not come back at
+            // the next sync.
+            document.excludeFromSync(nodesIn: id)
+            document.remove(id: id)
+        }
         if selection == id { selection = nil }
         if editingID == id { editingID = nil }
     }
@@ -431,6 +436,8 @@ final class DocumentStore: ObservableObject {
         copy.id = UUID()
         copy.name = "\(original.name) copy"
         copy.position = original.position + 1
+        // The copy belongs to the person, not to a sync.
+        copy.syncLink = nil
         // A tunnel needs its own identifier, or the two copies would fight
         // over the same live tunnel.
         copy.forwards = original.forwards.map { forward in
