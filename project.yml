@@ -10,7 +10,7 @@ options:
 packages:
   GhosttyKit:
     url: https://github.com/Lakr233/libghostty-spm
-    exactVersion: 2.2.2026103001
+    exactVersion: 2.2.2026110702
   ShellyardModel:
     path: Packages/ShellyardModel
   ShellyardVault:
