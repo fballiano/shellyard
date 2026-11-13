@@ -505,6 +505,14 @@ fixes; all three are upstream since 1.4.5: the wakeup observers,
 `ghostty_surface_key`. Before you pin a newer version, make sure that the
 three are still there. Each one prevents a bug that Shellyard hit.
 
+Since 2.2.2026111302, `TerminalViewState.onOpenURL` is also upstream.
+Shellyard sets it in `TerminalSession`. On macOS, Ghostty's own opener
+refuses every link in the terminal: an OSC 8 hyperlink, and a URL that it
+finds in the text too. Without the hook, a ⌘-click on a link does nothing.
+The hook opens only `http`, `https`, and `mailto` links
+(`TerminalSession.linkSchemes`), because the program in the pane sets the
+target. Make sure that the hook is still there before you pin a newer version.
+
 ## Traps
 
 **Never take a terminal tab out of the view tree.** The tab area draws every

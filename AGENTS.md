@@ -90,8 +90,9 @@ packages in `Packages/`:
   vendored fork with three fixes; all three are upstream since 1.4.5, so
   the copy is gone. Before pinning a newer version, check that the wakeup
   observers (`addWakeupObserver`), `TerminalViewState.isSurfaceVisible`,
-  `TerminalViewState.sendKey(_:)`, and `TerminalViewState.makePlatformView`
-  are still there — each guards against a bug Shellyard hit.
+  `TerminalViewState.sendKey(_:)`, `TerminalViewState.makePlatformView`,
+  and `TerminalViewState.onOpenURL` are still there — each guards against a
+  bug Shellyard hit. Without `onOpenURL`, a ⌘-click on a link does nothing.
 
 In the app target, `Shellyard/Terminal/` is the only code that calls
 libghostty. `Shellyard/Sessions/SessionsController.swift` owns tabs/splits

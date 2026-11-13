@@ -3,6 +3,7 @@
 //  Shellyard
 //
 
+import AppKit
 import Combine
 import Foundation
 import GhosttyTerminal
@@ -106,6 +107,12 @@ final class TerminalSession: Identifiable, ObservableObject {
             self?.platformView = view
             return view
         }
+        // On macOS, Ghostty's own opener refuses every link in the terminal:
+        // an OSC 8 hyperlink, and a URL it finds in the text too. A link
+        // opens only when Shellyard takes it.
+        state.onOpenURL = { url, _ in
+            Self.openLink(url)
+        }
         state.onClose = { [weak self] processAlive in
             MainActor.assumeIsolated {
                 self?.handleClose(processAlive: processAlive)
@@ -207,6 +214,31 @@ final class TerminalSession: Identifiable, ObservableObject {
     @discardableResult
     func press(_ key: TerminalKey) -> Bool {
         state.sendKey(key)
+    }
+
+    /// The schemes a ⌘-click on a link opens.
+    ///
+    /// The program in the pane sets the target of a link, and that program
+    /// can run on a server you do not trust. So a link opens only when it
+    /// goes to a web page or makes an email. Any other scheme, a `file:` URL
+    /// or the name of an app, goes back to Ghostty, which refuses it. A path
+    /// that Ghostty finds in the text has no scheme, so it goes back too.
+    nonisolated static let linkSchemes: Set<String> = ["http", "https", "mailto"]
+
+    /// The URL to open for a link, or `nil` when Shellyard must not open it.
+    nonisolated static func openableLink(_ link: String) -> URL? {
+        guard let url = URL(string: link),
+              let scheme = url.scheme?.lowercased(),
+              linkSchemes.contains(scheme)
+        else { return nil }
+        return url
+    }
+
+    /// Opens a link that you ⌘-clicked. Returns `false` to leave the link
+    /// to Ghostty.
+    nonisolated static func openLink(_ link: String) -> Bool {
+        guard let url = openableLink(link) else { return false }
+        return NSWorkspace.shared.open(url)
     }
 
     private func report(_ event: PaneEvent) {

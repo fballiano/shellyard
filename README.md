@@ -181,6 +181,11 @@ ends well, and red when that command fails. The green and red marks need a
 shell that reports its commands (OSC 133): a local shell does, and so does
 fish 4 or later on a server. The glow goes when you open the tab.
 
+⌘-click a link to open it. This works for a web address in the text, and
+for a link that a program prints, such as a pull request from Claude Code.
+Shellyard opens only `http`, `https`, and `mailto` links. A program on a
+server sets the target of its links, so Shellyard ignores every other kind.
+
 ### Tunnels
 
 Edit the tunnels of a connection in its editor. While the connection is
