@@ -186,6 +186,13 @@ for a link that a program prints, such as a pull request from Claude Code.
 Shellyard opens only `http`, `https`, and `mailto` links. A program on a
 server sets the target of its links, so Shellyard ignores every other kind.
 
+In a local tab, ⌘-click a path or a `file:` link to show the item in Finder.
+A folder opens in Finder. A file is selected in its folder, and Shellyard
+does not open it, because an app or a script would then run. A relative path
+starts at the folder of the shell. A line number after the path, as in
+`main.swift:12`, is ignored. In a connection tab, a path names a file on the
+server, so a ⌘-click on it does nothing.
+
 ### Tunnels
 
 Edit the tunnels of a connection in its editor. While the connection is

@@ -516,8 +516,13 @@ Shellyard sets it in `TerminalSession`. On macOS, Ghostty's own opener
 refuses every link in the terminal: an OSC 8 hyperlink, and a URL that it
 finds in the text too. Without the hook, a ⌘-click on a link does nothing.
 The hook opens only `http`, `https`, and `mailto` links
-(`TerminalSession.linkSchemes`), because the program in the pane sets the
-target. Make sure that the hook is still there before you pin a newer version.
+(`TerminalLink.openSchemes`), because the program in the pane sets the
+target. In a local pane (a launch with no command), a path that Ghostty finds
+in the text, or a `file:` link, shows in Finder: a folder opens, and a file or
+a package is selected. Shellyard never opens a file, because an app or a
+script would run. `TerminalLink.action` decides, and has no Ghostty code. In
+an SSH pane, a path names a file on the server, so the hook refuses it. Make
+sure that the hook is still there before you pin a newer version.
 
 ## Traps
 

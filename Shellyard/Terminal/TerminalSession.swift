@@ -108,10 +108,15 @@ final class TerminalSession: Identifiable, ObservableObject {
             return view
         }
         // On macOS, Ghostty's own opener refuses every link in the terminal:
-        // an OSC 8 hyperlink, and a URL it finds in the text too. A link
-        // opens only when Shellyard takes it.
-        state.onOpenURL = { url, _ in
-            Self.openLink(url)
+        // an OSC 8 hyperlink, and a URL or a path it finds in the text too.
+        // A link opens only when Shellyard takes it. See `TerminalLink`.
+        state.onOpenURL = { [weak self] url, _ in
+            MainActor.assumeIsolated {
+                guard let self,
+                      let link = TerminalLink.action(for: url, localDirectory: self.localDirectory)
+                else { return false }
+                return link.perform()
+            }
         }
         state.onClose = { [weak self] processAlive in
             MainActor.assumeIsolated {
@@ -216,29 +221,15 @@ final class TerminalSession: Identifiable, ObservableObject {
         state.sendKey(key)
     }
 
-    /// The schemes a ⌘-click on a link opens.
+    /// The folder of a pane that runs on this Mac, for a link to a file.
     ///
-    /// The program in the pane sets the target of a link, and that program
-    /// can run on a server you do not trust. So a link opens only when it
-    /// goes to a web page or makes an email. Any other scheme, a `file:` URL
-    /// or the name of an app, goes back to Ghostty, which refuses it. A path
-    /// that Ghostty finds in the text has no scheme, so it goes back too.
-    nonisolated static let linkSchemes: Set<String> = ["http", "https", "mailto"]
-
-    /// The URL to open for a link, or `nil` when Shellyard must not open it.
-    nonisolated static func openableLink(_ link: String) -> URL? {
-        guard let url = URL(string: link),
-              let scheme = url.scheme?.lowercased(),
-              linkSchemes.contains(scheme)
-        else { return nil }
-        return url
-    }
-
-    /// Opens a link that you ⌘-clicked. Returns `false` to leave the link
-    /// to Ghostty.
-    nonisolated static func openLink(_ link: String) -> Bool {
-        guard let url = openableLink(link) else { return false }
-        return NSWorkspace.shared.open(url)
+    /// A local shell has no command. A pane that runs `ssh` has one, and a
+    /// path in it names a file on the server, so it has no folder here.
+    private var localDirectory: String? {
+        guard launch.command == nil else { return nil }
+        return workingDirectory
+            ?? launch.workingDirectory
+            ?? FileManager.default.homeDirectoryForCurrentUser.path
     }
 
     private func report(_ event: PaneEvent) {
