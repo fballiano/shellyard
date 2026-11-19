@@ -25,5 +25,5 @@ done
 
 TEST_RUNNER_SHELLYARD_TEST_SYNC_PORT=$port \
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-    -destination 'platform=macOS,arch=arm64' -derivedDataPath build \
+    -destination 'platform=macOS,arch=arm64' -derivedDataPath build.noindex \
     -only-testing:ShellyardUITests/FolderSyncTests test

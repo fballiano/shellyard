@@ -26,7 +26,7 @@ import.
 # Build only
 xcodegen generate
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-           -configuration Debug -derivedDataPath build build
+           -configuration Debug -derivedDataPath build.noindex build
 
 # Package tests (each package is an independent SwiftPM package)
 (cd Packages/ShellyardModel && swift test)
@@ -40,7 +40,7 @@ xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
 
 # UI tests (drive the real app)
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-           -destination 'platform=macOS,arch=arm64' -derivedDataPath build test
+           -destination 'platform=macOS,arch=arm64' -derivedDataPath build.noindex test
 ```
 
 Notes on tests:

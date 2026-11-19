@@ -55,5 +55,5 @@ done
 TEST_RUNNER_SHELLYARD_TEST_SSH_PORT=$port \
 TEST_RUNNER_SHELLYARD_TEST_SSH_KEY="$dir/key" \
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-    -destination 'platform=macOS,arch=arm64' -derivedDataPath build \
+    -destination 'platform=macOS,arch=arm64' -derivedDataPath build.noindex \
     -only-testing:"$only" test

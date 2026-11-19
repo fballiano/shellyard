@@ -20,10 +20,10 @@ echo "==> Building"
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
            -configuration Debug \
            -destination 'platform=macOS,arch=arm64' \
-           -derivedDataPath build build \
+           -derivedDataPath build.noindex build \
     | grep -E "error:|warning:|BUILD" || true
 
-APP="build/Build/Products/Debug/Shellyard.app"
+APP="build.noindex/Build/Products/Debug/Shellyard.app"
 if [ ! -d "$APP" ]; then
     echo "The build produced no application."
     exit 1

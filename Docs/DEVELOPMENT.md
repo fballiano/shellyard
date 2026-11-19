@@ -41,13 +41,19 @@ version.
 
 `./run.sh` quits every running Shellyard before it starts the new build.
 
+The build goes into `build.noindex/`. Spotlight does not index a folder whose
+name ends in `.noindex`. Without this, Spotlight and other launchers show the
+Debug build next to the copy in `/Applications`, with the same name and icon.
+A launcher can then start the Debug build, and the Dock icon starts the other
+copy, so two copies run at the same time.
+
 Or by hand:
 
 ```sh
 xcodegen generate
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-           -configuration Debug -derivedDataPath build build
-open build/Build/Products/Debug/Shellyard.app
+           -configuration Debug -derivedDataPath build.noindex build
+open build.noindex/Build/Products/Debug/Shellyard.app
 ```
 
 `Shellyard.xcodeproj` is generated. Do not edit it. Change `project.yml` and
@@ -87,7 +93,7 @@ The UI tests drive the real application:
 
 ```sh
 xcodebuild -project Shellyard.xcodeproj -scheme Shellyard \
-           -destination 'platform=macOS,arch=arm64' -derivedDataPath build test
+           -destination 'platform=macOS,arch=arm64' -derivedDataPath build.noindex test
 ```
 
 They write a document with the vault API, then start the application with
