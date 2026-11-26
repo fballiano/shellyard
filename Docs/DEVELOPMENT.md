@@ -143,11 +143,19 @@ Two suites are opt-in:
 
 The tag starts `.github/workflows/release.yml`. It builds the Release
 configuration, signs it with the Developer ID certificate, has Apple notarize
-it, staples the ticket, publishes a GitHub release with the zip, and points
+it, staples the ticket, publishes a GitHub release with the zip and its
+notes, and points
 `Casks/shellyard.rb` in
 [fballiano/homebrew-tap](https://github.com/fballiano/homebrew-tap) at the
 new zip. It pushes to the tap with the deploy key in the secret
 `TAP_DEPLOY_KEY`, which can write to that repository only.
+
+The release notes list the commit subjects since the previous tag. The
+commits that raise the version are left out. Shellyard has no pull requests,
+so `--generate-notes` would give only a link. Write each commit subject for
+a person who uses the app, because it becomes a line in the notes. To write
+fuller notes, edit the release after the workflow:
+`gh release edit v<version> --notes-file <file>`.
 
 Until 1.2.0, this repository was its own tap, `fballiano/termora`. It has no
 cask now. A user of the old tap moves with the commands in the README.

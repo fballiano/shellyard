@@ -45,7 +45,11 @@ jobs:
       TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       APP: build/Build/Products/Release/Shellyard.app
     steps:
+      # The whole history and the tags: the release notes list the commits
+      # since the previous tag.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Select the newest Xcode
         run: |
@@ -198,11 +202,26 @@ jobs:
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
+        # Shellyard has no pull requests, so --generate-notes would give only
+        # a link. The notes list the commit subjects since the previous tag,
+        # without the commits that raise the version.
         run: |
+          previous="$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)"
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --format='- %s' "${previous:+$previous..}$GITHUB_REF_NAME" \
+              | grep -v '^- Raise the version to ' || true
+            if [ -n "$previous" ]; then
+              echo
+              echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$previous...$GITHUB_REF_NAME"
+            fi
+          } > release-notes.md
+          cat release-notes.md
           gh release create "$GITHUB_REF_NAME" \
             "Shellyard-${{ steps.package.outputs.version }}.zip" \
             --title "Shellyard ${{ steps.package.outputs.version }}" \
-            --generate-notes
+            --notes-file release-notes.md
 
       # The cask lives in fballiano/homebrew-tap. The secret TAP_DEPLOY_KEY is
       # a deploy key with write access to that repository only.
