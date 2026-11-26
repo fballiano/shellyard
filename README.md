@@ -174,6 +174,9 @@ same folder. With no tab open, it is a local shell in your home folder.
 ⇧⌘T, or **Local Shell** in the sidebar, always opens a local shell. A local
 tab shows the name of its current folder, and a split opens in that folder.
 
+Drag a tab along the row to put it in a different place. ⌘1 … ⌘9 and the
+tab list follow the new order.
+
 A tab you cannot see glows when it needs a look. It glows in the accent
 colour when a program rings the bell, for example after
 `make; printf '\a'`. It glows green when a command of five seconds or more

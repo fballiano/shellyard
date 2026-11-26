@@ -114,6 +114,10 @@ libghostty. `Shellyard/Sessions/SessionsController.swift` owns tabs/splits
 - **Do not use `.searchable` in the sidebar.** With `placement: .sidebar`
   the system draws its field above all other sidebar content, so nothing can
   sit above the filter. `SidebarView` has its own `FilterField` for this.
+- **A SwiftUI drop target inside another drop target never gets the drag.**
+  A tab drag reached only the row's `onDrop`, never the one on each tab. The
+  tab row has one `TabDropDelegate`, which finds the tab from the pointer
+  position.
 - **A new menu shortcut must also go in `GhosttyEnvironment.menuKeyTriggers`.**
   A focused pane takes every key that Ghostty binds (⌘T is `new_tab`), and the
   menu never sees it.

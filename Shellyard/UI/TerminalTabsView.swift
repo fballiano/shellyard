@@ -6,6 +6,7 @@
 import AppKit
 import GhosttyTerminal
 import SwiftUI
+import UniformTypeIdentifiers
 import ShellyardModel
 
 /// The terminal area: a tab bar, and the split tree of the chosen tab.
@@ -70,9 +71,18 @@ struct TabBar: View {
     /// the height is named here on both the content and the scroll view.
     static let height: CGFloat = 28
 
+    /// The width of every tab. Every tab is the same size, so the gaps
+    /// between them are even and a long name cannot push its neighbours
+    /// about. A drag finds the tab under the pointer from it too.
+    static let tabWidth: CGFloat = 150
+    /// The gap between two tabs.
+    static let tabSpacing: CGFloat = 4
+    /// The room before the first tab and after the last one.
+    static let rowPadding: CGFloat = 4
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
+            HStack(spacing: Self.tabSpacing) {
                 ForEach(Array(sessions.tabs.enumerated()), id: \.element.id) { at, tab in
                     TabButton(
                         tab: tab,
@@ -81,10 +91,69 @@ struct TabBar: View {
                     )
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Self.rowPadding)
             .frame(height: Self.height)
+            .onDrop(of: [.shellyardTab], delegate: TabDropDelegate(sessions: sessions))
         }
         .frame(height: Self.height)
+    }
+}
+
+extension UTType {
+    /// The kind Shellyard puts on the pasteboard while a tab is dragged.
+    ///
+    /// The kind is not the sidebar's: a tab dropped on the sidebar, or a
+    /// bookmark dropped on the tab row, must do nothing.
+    static let shellyardTab = UTType(exportedAs: "com.fabrizioballiano.shellyard.tab")
+}
+
+/// Moves the dragged tab to the place under the pointer, while the drag
+/// goes on.
+///
+/// The tab moves before the drop, so the row always shows where the tab will
+/// land. Every tab has the same width, so the moved tab lands under the
+/// pointer and the move cannot go back and forth.
+///
+/// The delegate sits on the whole row and finds the place from the position
+/// of the pointer. A drop target on each tab does not work: the tabs are
+/// inside the row's target, and only the row's target ever saw the drag.
+///
+/// The dragged tab is read from `sessions.draggingTabID`, not from the
+/// pasteboard, for the reason `SidebarDropDelegate` gives.
+private struct TabDropDelegate: DropDelegate {
+    let sessions: SessionsController
+
+    func validateDrop(info _: DropInfo) -> Bool {
+        sessions.draggingTabID != nil
+    }
+
+    func dropEntered(info: DropInfo) { follow(info) }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        follow(info)
+        return DropProposal(operation: .move)
+    }
+
+    /// The dropped tab becomes the chosen tab, and its pane takes the
+    /// keyboard. See `TerminalTabsView`, which focuses the pane.
+    func performDrop(info _: DropInfo) -> Bool {
+        if let dragged = sessions.draggingTabID {
+            sessions.selectedTabID = dragged
+        }
+        sessions.draggingTabID = nil
+        return true
+    }
+
+    /// Puts the dragged tab in the place under the pointer.
+    private func follow(_ info: DropInfo) {
+        guard let dragged = sessions.draggingTabID, !sessions.tabs.isEmpty else { return }
+        let slot = TabBar.tabWidth + TabBar.tabSpacing
+        let place = Int(((info.location.x - TabBar.rowPadding) / slot).rounded(.down))
+        let target = sessions.tabs[min(max(place, 0), sessions.tabs.count - 1)].id
+        guard target != dragged else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            sessions.moveTab(dragged, to: target)
+        }
     }
 }
 
@@ -138,9 +207,7 @@ private struct TabButton: View {
         }
         .padding(.leading, 8)
         .padding(.trailing, 4)
-        // Every tab is the same size, so the gaps between them are even and
-        // a long name cannot push its neighbours about.
-        .frame(width: 150, height: TabBar.height - 6)
+        .frame(width: TabBar.tabWidth, height: TabBar.height - 6)
         .background(background)
         .clipShape(RoundedRectangle(cornerRadius: 5))
         // The chosen tab has no coloured edge. A coloured edge is the
@@ -151,6 +218,14 @@ private struct TabButton: View {
         .onHover { isHovering = $0 }
         .help(tab.isLocal ? (tab.focusedPane?.workingDirectory ?? tab.name) : tab.name)
         .contextMenu { menu }
+        // A drag puts the tab in another place in the row.
+        .onDrag {
+            dragProvider()
+        } preview: {
+            Label(tab.name, systemImage: tab.iconName)
+                .font(.system(size: 12))
+                .padding(6)
+        }
         // A name a test can ask for. Without it, a test looking for the tab
         // finds the sidebar row of the same name and passes while the tab bar
         // draws nothing at all.
@@ -208,6 +283,26 @@ private struct TabButton: View {
         .buttonStyle(.plain)
         .onHover { isHoveringClose = $0 }
         .help("Close this tab")
+    }
+
+    /// Makes the item that travels with a drag of this tab.
+    ///
+    /// The data on the pasteboard is only a name for the kind. What moves is
+    /// read from `sessions.draggingTabID`, which is set here, as the drag
+    /// begins. A drag that ends outside the row leaves it set; the next drag
+    /// sets it again, and nothing reads it in between.
+    private func dragProvider() -> NSItemProvider {
+        sessions.draggingTabID = tab.id
+        let id = tab.id
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(
+            forTypeIdentifier: UTType.shellyardTab.identifier,
+            visibility: .ownProcess
+        ) { completion in
+            completion(Data(id.uuidString.utf8), nil)
+            return nil
+        }
+        return provider
     }
 
     /// The key that chooses this tab, or nothing after the ninth tab.

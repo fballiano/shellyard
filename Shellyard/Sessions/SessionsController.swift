@@ -904,6 +904,22 @@ final class SessionsController: ObservableObject {
         openFiles(connection: connection)
     }
 
+    /// The tab that a drag in the tab row carries, from the start of the drag
+    /// to the drop. See `TabDropDelegate`.
+    var draggingTabID: UUID?
+
+    /// Puts a tab in the place of another tab in the row. The other tab, and
+    /// every tab between the two, moves one place towards the old place.
+    ///
+    /// The order is the order of the row, of ⌘1…⌘9, and of the tab list.
+    func moveTab(_ tabID: UUID, to targetID: UUID) {
+        guard tabID != targetID,
+              let from = tabs.firstIndex(where: { $0.id == tabID }),
+              let to = tabs.firstIndex(where: { $0.id == targetID })
+        else { return }
+        tabs.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+    }
+
     func closeOtherTabs(than tabID: UUID) {
         for other in tabs where other.id != tabID { closeTab(other.id) }
     }
